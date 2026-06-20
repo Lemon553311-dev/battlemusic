@@ -1,7 +1,7 @@
 # Battle Music for Fabric
 
-This mod plays your imported music during mob/PVP battles
-**At the moment Minecraft 26.1.2 is only supported**
+This mod plays your imported music during mob/PVP battles.
+**Version support: Minecraft 26.1 and 26.2**
 
 ## Features
 
@@ -14,7 +14,7 @@ This mod plays your imported music during mob/PVP battles
 
 ## Dependencies
 
-1. Requires [Fabric Loader](https://fabricmc.net/use/) for Minecraft 26.1.2.
+1. Requires [Fabric Loader](https://fabricmc.net/use/) for Minecraft 26.1 or 26.2.
 2. [Fabric API](https://modrinth.com/mod/fabric-api)
 3. (optional) [Mod Menu](https://modrinth.com/mod/modmenu) and [Cloth Config](https://modrinth.com/mod/cloth-config)
 
@@ -51,6 +51,7 @@ Edit in-game via Mod Menu, or by manually at `config/battlemusic.json`.
 | `playerDamageWindowSeconds`  | 5.0     | Rolling window the PvP damage is summed over                                 |
 | `playerCombatTimeoutSeconds` | 15.0    | How long PvP music holds after the last player hit                           |
 | `playerCombatMusicPool`      | HEAVY   | Music pool the PvP trigger uses: `HEAVY`, `REGULAR`, or `BOTH`               |
+| `heavyAggroMobCount`         | 15      | Aggroed mobs that force heavy on their own (a big swarm is always heavy)     |
 | `bossRadius`                 | 48      | Scan radius for bosses                                                       |
 | `includeMiniBosses`          | true    | Treat mini-bosses (Ravager, Evoker, etc.) as bosses                          |
 | `extraBossIds`               | []      | Extra entity IDs that force heavy                                            |
