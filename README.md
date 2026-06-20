@@ -1,7 +1,6 @@
 # Battle Music for Fabric
 
-This mod plays your imported music during mob/PVP battles
-**At the moment Minecraft 26.1.2 is only supported**
+This mod plays your imported music during mob/PVP battles. 
 
 ## Features
 
