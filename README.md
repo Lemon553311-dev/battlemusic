@@ -5,12 +5,12 @@ This mod plays your imported music during mob/PVP battles
 
 ## Features
 
-- **Mob battles** — starts when 5 hostile mobs are aggroed on you.
-- **Heavy mode** — changes to a separate "heavy" playlist when the health drops low or a boss shows up.
-- **PvP trigger** — Taking a set number damage from another player starts combat music. 
-- **Boss detection** — Starts playing the heavy playlist when bosses are in range, plus optional mini-bosses (Elder Guardian, Ravager, Evoker, Piglin Brute) and any extra entity IDs configured.
-- **Battle resume** — if a new fight starts right after the last, it picks the track back up where it faded.
-- **Configurable everything** — detection range, thresholds, fade times, pools, and more, editable in-game (req. ModMenu and Cloth Config) or via the JSON config.
+- **Mob battles:** starts when 5 hostile mobs are aggroed on you.
+- **Heavy mode:** changes to a separate "heavy" playlist when the health drops low or a boss shows up.
+- **PvP trigger:** Taking a set number damage from another player starts combat music. 
+- **Boss detection:** Starts playing the heavy playlist when bosses are in range, plus optional mini-bosses (Elder Guardian, Ravager, Evoker, Piglin Brute) and any extra entity IDs configured.
+- **Battle resume:** if a new fight starts right after the last, it picks the track back up where it faded.
+- **Configurable everything:** detection range, thresholds, fade times, pools, and more, editable in-game (req. ModMenu and Cloth Config) or via the JSON config.
 
 ## Dependencies
 
