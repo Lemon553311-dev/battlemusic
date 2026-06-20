@@ -58,8 +58,7 @@ public class MusicLibrary {
 			if (!Files.exists(readme)) {
 				Files.writeString(readme,
 						"Drop .ogg files into 'Regular Battle' and 'Heavy Battle'.\n"
-								+ "Multiple files per folder are picked at random each fight.\n"
-								+ "Convert other formats with: ffmpeg -i song.mp3 -ac 2 song.ogg\n");
+								+ "The song will be picked at random if there's multiple files.");
 			}
 		} catch (IOException e) {
 			BattleMusicClient.LOGGER.warn("Could not create music folders", e);

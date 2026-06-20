@@ -57,10 +57,10 @@ public class BattleMusicClient implements ClientModInitializer {
 		LOGGER.info("Battle Music initialised. Music folder: {} ({} regular, {} heavy track(s) found)",
 				library.getRootFolder(), library.regularCount(), library.heavyCount());
 		LOGGER.info("Battle Music config: enabled={}, debug={}, aggroMobCount={}, detectionRadius={}, "
-						+ "heavyHealthThreshold={}, bossRadius={}, requireLineOfSight={}, masterVolume={} | "
+						+ "heavyHealthThreshold={}, bossRadius={}, requireLineOfSight={} | "
 						+ "pvpTrigger={} (>={} HP from players in {}s, combatTimeout {}s)",
 				config.enabled, config.debug, config.aggroMobCount, config.detectionRadius,
-				config.heavyHealthThreshold, config.bossRadius, config.requireLineOfSight, config.masterVolume,
+				config.heavyHealthThreshold, config.bossRadius, config.requireLineOfSight,
 				config.playerDamageTriggerEnabled, config.playerDamageThresholdHp,
 				config.playerDamageWindowSeconds, config.playerCombatTimeoutSeconds);
 	}

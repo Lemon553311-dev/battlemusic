@@ -45,9 +45,9 @@ public class ModMenuIntegration implements ModMenuApi {
 			if (BattleMusicClient.stateMachine() != null) {
 				BattleMusicClient.stateMachine().onConfigChanged();
 			}
-			BattleMusicClient.debug("Config saved from ModMenu screen: enabled={}, masterVolume={}, "
+			BattleMusicClient.debug("Config saved from ModMenu screen: enabled={}, "
 					+ "aggroMobCount={}, detectionRadius={}, heavyHealthThreshold={}, bossRadius={}",
-					c.enabled, c.masterVolume, c.aggroMobCount, c.detectionRadius,
+					c.enabled, c.aggroMobCount, c.detectionRadius,
 					c.heavyHealthThreshold, c.bossRadius);
 		});
 
@@ -59,13 +59,6 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setDefaultValue(true)
 				.setTooltip(Component.literal("Master on/off switch for the whole mod."))
 				.setSaveConsumer(v -> c.enabled = v)
-				.build());
-		general.addEntry(eb.startIntSlider(Component.literal("Master volume"),
-						(int) Math.round(c.masterVolume * 100.0), 0, 100)
-				.setDefaultValue(100)
-				.setTextGetter(v -> Component.literal(v + "%"))
-				.setTooltip(Component.literal("Playback volume for battle music. Independent of Minecraft's own volume sliders."))
-				.setSaveConsumer(v -> c.masterVolume = v / 100.0)
 				.build());
 		general.addEntry(eb.startBooleanToggle(Component.literal("Debug logging"), c.debug)
 				.setDefaultValue(false)

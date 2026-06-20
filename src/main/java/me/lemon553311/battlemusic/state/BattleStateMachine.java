@@ -12,6 +12,7 @@ import me.lemon553311.battlemusic.detection.PlayerDamageTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.sounds.SoundSource;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -114,8 +115,13 @@ public class BattleStateMachine {
 		double dt = computeDeltaSeconds();
 
 		if (!engine.isReady()) return;
-		regularChannel.setMasterVolume((float) config.masterVolume);
-		heavyChannel.setMasterVolume((float) config.masterVolume);
+
+		// volume follows minecraft's own sliders (master x music), so battle music
+		// respects the in-game sound options like any other music.
+		float mcVolume = client.options.getSoundSourceVolume(SoundSource.MASTER)
+				* client.options.getSoundSourceVolume(SoundSource.MUSIC);
+		regularChannel.setOutputVolume(mcVolume);
+		heavyChannel.setOutputVolume(mcVolume);
 
 		LocalPlayer player = client.player;
 		ClientLevel world = client.level;

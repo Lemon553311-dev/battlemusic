@@ -59,7 +59,6 @@ Edit in-game via Mod Menu, or by manually at `config/battlemusic.json`.
 | `fadeInDurationSeconds`      | 3.0     | Length of the fade-in when a battle starts                                 |
 | `battleResumeEnabled`        | true    | Resume the last track if a new fight starts soon after                     |
 | `resumeWithinSeconds`        | 30.0    | How soon "soon after" is                                                   |
-| `masterVolume`               | 1.0     | Music volume (0–1) **(PLEASE CONFIGURE THIS OR YOUR EARS MAY BE BLASTED)** |
 | `enabled`                    | true    | Disable or enable battle music on/off                                      |
 | `debug`                      | false   | `[battlemusic DEBUG]` logging to the game log for developers               |
 

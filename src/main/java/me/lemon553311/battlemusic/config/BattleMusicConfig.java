@@ -110,8 +110,6 @@ public class BattleMusicConfig {
 	public int resumeAggroMobCount = 3;
 
 	// ---- Output ----------------------------------------------------------
-	/** Master multiplier applied to battle music (0..1) */
-	public double masterVolume = 1.0D;
 	/** Master on/off switch for the whole mod */
 	public boolean enabled = true;
 	/** Verbose debug logging to the game log/console (INFO level, prefixed with [DBG]) */
@@ -175,7 +173,6 @@ public class BattleMusicConfig {
 		fadeInDurationSeconds = clampD(fadeInDurationSeconds, 0.0D, 60.0D);
 		resumeWithinSeconds = clampD(resumeWithinSeconds, 0.0D, 600.0D);
 		resumeAggroMobCount = (int) clampD(resumeAggroMobCount, 1, 200);
-		masterVolume = clampD(masterVolume, 0.0D, 1.0D);
 		if (extraBossIds == null) extraBossIds = new ArrayList<>();
 		if (playerCombatMusicPool == null) playerCombatMusicPool = PvpMusicPool.HEAVY;
 	}

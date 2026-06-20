@@ -47,7 +47,7 @@ public class MusicChannel {
 	private volatile float targetGain = 0f;    // 0..1, pre-master
 	private float fadeRate = 0f;               // gain units per second
 	private boolean stopWhenSilent = false;
-	private volatile float masterVolume = 1f;
+	private volatile float outputVolume = 1f;
 
 	private volatile Path loaded;
 	private volatile Thread playThread;
@@ -120,8 +120,8 @@ public class MusicChannel {
 		stopThread();
 	}
 
-	public void setMasterVolume(float master) {
-		this.masterVolume = Math.max(0f, Math.min(1f, master));
+	public void setOutputVolume(float volume) {
+		this.outputVolume = Math.max(0f, Math.min(1f, volume));
 	}
 
 	// Advance the fade. Call once per tick with real dt. Cheap, no audio.
@@ -257,7 +257,7 @@ public class MusicChannel {
 
 				playbackFrame = stb_vorbis_get_sample_offset(decoder);
 				int sampleCount = n * channels;
-				float gain = clamp01(currentGain * masterVolume);
+				float gain = clamp01(currentGain * outputVolume);
 
 				for (int i = 0; i < sampleCount; i++) {
 					int v = (int) (pcm.get(i) * gain);
