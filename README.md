@@ -1,12 +1,12 @@
 # Battle Music for Fabric
 
 This mod plays your imported music during mob/PVP battles
-**At the moment Minecraft 26.1.2 is only supported**
+**Version support: Minecraft 26.1 and 26.2**
 
 ## Features
 
 - **Mob battles:** starts when 5 hostile mobs are aggroed on you.
-- **Heavy mode:** changes to a separate "heavy" playlist when the health drops low or a boss shows up.
+- **Heavy mode:** changes to a separate "heavy" playlist when your health drops low, a boss shows up, or you are swarmed by a big group of mobs.
 - **PvP trigger:** Taking a set number damage from another player starts combat music. 
 - **Boss detection:** Starts playing the heavy playlist when bosses are in range, plus optional mini-bosses (Elder Guardian, Ravager, Evoker, Piglin Brute) and any extra entity IDs configured.
 - **Battle resume:** if a new fight starts right after the last, it picks the track back up where it faded.
@@ -14,7 +14,7 @@ This mod plays your imported music during mob/PVP battles
 
 ## Dependencies
 
-1. Requires [Fabric Loader](https://fabricmc.net/use/) for Minecraft 26.1.2.
+1. Requires [Fabric Loader](https://fabricmc.net/use/) for Minecraft 26.1 or 26.2.
 2. [Fabric API](https://modrinth.com/mod/fabric-api)
 3. (optional) [Mod Menu](https://modrinth.com/mod/modmenu) and [Cloth Config](https://modrinth.com/mod/cloth-config)
 
@@ -42,11 +42,14 @@ Add your music corresponding to the folder.
 
 Edit in-game via Mod Menu, or by manually at `config/battlemusic.json`.
 
+The Mod Menu screen also has an **▶ Open the battle music folder** shortcut at the top of the General tab that opens the folder in your file browser.
+
 | Option                       | Default | What it does                                                                 |
 |------------------------------|---------|------------------------------------------------------------------------------|
 | `aggroMobCount`              | 5       | Aggroed mobs needed to start a regular battle                                |
 | `detectionRadius`            | 25      | Blocks to scan for hostile mobs                                              |
 | `heavyHealthThreshold`       | 6.0     | HP at/below which a battle goes heavy (2 HP = 1 heart)                       |
+| `heavyAggroMobCount`         | 15      | Aggroed mobs that force heavy on their own (a big swarm is always heavy)     |
 | `playerDamageThresholdHp`    | 6.0     | Player damage within the window that triggers PvP music                      |
 | `playerDamageWindowSeconds`  | 5.0     | Rolling window the PvP damage is summed over                                 |
 | `playerCombatTimeoutSeconds` | 15.0    | How long PvP music holds after the last player hit                           |
