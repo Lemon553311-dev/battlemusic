@@ -1,0 +1,40 @@
+{
+	"schemaVersion": 1,
+	"id": "battlemusic",
+	"version": "${version}",
+	"name": "Battle Music",
+	"description": "Plays your own music during fights. Regular and heavy battle states, smooth fades, hysteresis so the track does not cut mid-fight.",
+	"authors": [
+                "Lemon553311",
+                "user2378",
+                "uxokpro1234"
+                ],
+
+	"contact": {
+      "discords":"lemon553311, uxokpro1234"
+    },
+
+	"license": "MIT",
+	"icon": "assets/battlemusic/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+          "me.lemon553311.battlemusic.BattleMusicClient"
+		],
+		"modmenu": [
+          "me.lemon553311.battlemusic.config.ModMenuIntegration"
+		]
+	},
+
+	"depends": {
+		"fabricloader": ">=0.17.0",
+		"minecraft": "~26.1",
+		"java": ">=25",
+		"fabric-api": "*"
+	},
+
+	"suggests": {
+		"modmenu": ">=18.0.0-beta.1",
+		"cloth-config": "*"
+	}
+}
