@@ -68,11 +68,10 @@ Edit in-game via Mod Menu, or by manually at `config/battlemusic.json`.
 - Lemon553311
 - user2378
 - Dragon6555
-- probably someone else i dont remember
 
 ## License
 
-MIT
+MIT LICENSE
 
 ## Bragging
 ![img.png](bragging.png)
