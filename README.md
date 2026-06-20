@@ -63,8 +63,6 @@ Edit in-game via Mod Menu, or by manually at `config/battlemusic.json`.
 | `enabled`                    | true    | Disable or enable battle music on/off                                      |
 | `debug`                      | false   | `[battlemusic DEBUG]` logging to the game log for developers               |
 
-There are more fine-grained detection options (line-of-sight, head-aim tolerance, active-engagement filtering, etc.) — see the tooltips in the settings screen.
-
 ## Credits
 
 - Lemon553311
