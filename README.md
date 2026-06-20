@@ -60,7 +60,7 @@ Edit in-game via Mod Menu, or by manually at `config/battlemusic.json`.
 | `battleResumeEnabled`        | true    | Resume the last track if a new fight starts soon after                       |
 | `resumeWithinSeconds`        | 30.0    | Time windows where the music can continue where it left off after fading out |
 | `enabled`                    | true    | Disable or enable battle music on/off                                        |
-| `debug`                      | false   | `[battlemusic DEBUG]` logging to the game log for developers                 |
+| `debug`                      | false   | Enable debug logging                                                         |
 
 ## Credits
 
