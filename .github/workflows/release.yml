@@ -3,11 +3,11 @@ name: Build & Release
 on:
   push:
     tags:
-      - 'v*'        # triggers on tags like v1.0.0
-  workflow_dispatch: # lets you run it manually from the Actions tab
+      - 'v*'
+  workflow_dispatch:
 
 permissions:
-  contents: write    # needed to create the Release
+  contents: write
 
 jobs:
   build:
