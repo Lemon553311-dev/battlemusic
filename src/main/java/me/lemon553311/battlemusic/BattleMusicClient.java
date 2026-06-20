@@ -18,8 +18,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Lemon553311
  *
- * Plays your own imported battle music. Purely client-side: it does not use or
- * send any custom packets to the server.
+ * im gonna lose my mind with this holy shit
  *
  */
 
