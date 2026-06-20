@@ -2,8 +2,9 @@ name: Build & Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -27,13 +28,22 @@ jobs:
       - name: Build
         run: gradle build --no-daemon
 
-      - name: Collect release jar
+      - name: Collect jar
         run: |
           mkdir -p release
           cp build/libs/*.jar release/
           rm -f release/*-sources.jar release/*-dev.jar release/*-dev-shadow.jar
 
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: battlemusic-jar
+          path: release/*.jar
+
+
       - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: release/*.jar
