@@ -42,25 +42,25 @@ Add your music corresponding to the folder.
 
 Edit in-game via Mod Menu, or by manually at `config/battlemusic.json`.
 
-| Option                       | Default | What it does                                                               |
-|------------------------------|---------|----------------------------------------------------------------------------|
-| `aggroMobCount`              | 5       | Aggroed mobs needed to start a regular battle                              |
-| `detectionRadius`            | 25      | Blocks to scan for hostile mobs                                            |
-| `heavyHealthThreshold`       | 6.0     | HP at/below which a battle goes heavy (2 HP = 1 heart)                     |
-| `playerDamageThresholdHp`    | 6.0     | Player damage within the window that triggers PvP music                    |
-| `playerDamageWindowSeconds`  | 5.0     | Rolling window the PvP damage is summed over                               |
-| `playerCombatTimeoutSeconds` | 15.0    | How long PvP music holds after the last player hit                         |
-| `playerCombatMusicPool`      | HEAVY   | Music pool the PvP trigger uses: `HEAVY`, `REGULAR`, or `BOTH`             |
-| `bossRadius`                 | 48      | Scan radius for bosses                                                     |
-| `includeMiniBosses`          | true    | Treat mini-bosses (Ravager, Evoker, etc.) as bosses                        |
-| `extraBossIds`               | []      | Extra entity IDs that force heavy                                          |
-| `fadeOutDelaySeconds`        | 15.0    | Time without battle before the fade-out starts                             |
-| `fadeOutDurationSeconds`     | 7.0     | Length of the fade-out                                                     |
-| `fadeInDurationSeconds`      | 3.0     | Length of the fade-in when a battle starts                                 |
-| `battleResumeEnabled`        | true    | Resume the last track if a new fight starts soon after                     |
-| `resumeWithinSeconds`        | 30.0    | How soon "soon after" is                                                   |
-| `enabled`                    | true    | Disable or enable battle music on/off                                      |
-| `debug`                      | false   | `[battlemusic DEBUG]` logging to the game log for developers               |
+| Option                       | Default | What it does                                                                 |
+|------------------------------|---------|------------------------------------------------------------------------------|
+| `aggroMobCount`              | 5       | Aggroed mobs needed to start a regular battle                                |
+| `detectionRadius`            | 25      | Blocks to scan for hostile mobs                                              |
+| `heavyHealthThreshold`       | 6.0     | HP at/below which a battle goes heavy (2 HP = 1 heart)                       |
+| `playerDamageThresholdHp`    | 6.0     | Player damage within the window that triggers PvP music                      |
+| `playerDamageWindowSeconds`  | 5.0     | Rolling window the PvP damage is summed over                                 |
+| `playerCombatTimeoutSeconds` | 15.0    | How long PvP music holds after the last player hit                           |
+| `playerCombatMusicPool`      | HEAVY   | Music pool the PvP trigger uses: `HEAVY`, `REGULAR`, or `BOTH`               |
+| `bossRadius`                 | 48      | Scan radius for bosses                                                       |
+| `includeMiniBosses`          | true    | Treat mini-bosses (Ravager, Evoker, etc.) as bosses                          |
+| `extraBossIds`               | []      | Extra entity IDs that force heavy                                            |
+| `fadeOutDelaySeconds`        | 15.0    | Time without battle before the fade-out starts                               |
+| `fadeOutDurationSeconds`     | 7.0     | Length of the fade-out                                                       |
+| `fadeInDurationSeconds`      | 3.0     | Length of the fade-in when a battle starts                                   |
+| `battleResumeEnabled`        | true    | Resume the last track if a new fight starts soon after                       |
+| `resumeWithinSeconds`        | 30.0    | Time windows where the music can continue where it left off after fading out |
+| `enabled`                    | true    | Disable or enable battle music on/off                                        |
+| `debug`                      | false   | `[battlemusic DEBUG]` logging to the game log for developers                 |
 
 ## Credits
 
