@@ -220,14 +220,14 @@ public class BattleStateMachine {
 					BattleMusicClient.debug("RESUME-WINDOW RESTART: {} mob(s) >= resumeAggroMobCount {} (cold start needs {}) within {}s window",
 							count, config.resumeAggroMobCount, config.aggroMobCount, config.resumeWithinSeconds);
 				}
-				startBattle(player, boss, playerCombatHot);
+				startBattle(player, boss, playerCombatHot, count);
 			}
 		} else {
 			boolean stillFighting = count > 0 || boss || playerCombatHot;
 			if (stillFighting) {
 				graceSecondsLeft = 0.0;
 				cancelFadeOutIfNeeded();
-				maybeUpgradeToHeavy(player, boss, playerCombatHot);
+				maybeUpgradeToHeavy(player, boss, playerCombatHot, count);
 				// track what's actually holding the battle. mobs/boss can re-aggro so they keep
 				// the grace window when they clear; a pvp-timer-only battle doesn't need it (the
 				// timeout already buffered the gap).
@@ -257,7 +257,7 @@ public class BattleStateMachine {
 		tickChannels(dt);
 	}
 
-	private void startBattle(LocalPlayer player, boolean boss, boolean playerCombatHot) {
+	private void startBattle(LocalPlayer player, boolean boss, boolean playerCombatHot, int count) {
 		// Cheap mtime-gated rescan: walks disk only if a music folder was actually
 		// modified since last scan. Avoids the per-battle disk hitch.
 		library.rescanIfChanged();
@@ -268,6 +268,7 @@ public class BattleStateMachine {
 		graceSecondsLeft = 0.0;
 
 		boolean lowHp = player.getHealth() <= config.heavyHealthThreshold;
+		boolean manyMobs = count >= config.heavyAggroMobCount;
 		BattleMusicConfig.PvpMusicPool pool = (config.playerCombatMusicPool != null)
 				? config.playerCombatMusicPool : BattleMusicConfig.PvpMusicPool.HEAVY;
 		// who governs this battle's music:
@@ -281,6 +282,9 @@ public class BattleStateMachine {
 				boss, player.getHealth(), lowHp, playerCombatHot, config.playerCombatMusicPool, pvpPoolGoverned);
 
 		if (boss) {
+			engageHeavy(true);
+		} else if (manyMobs) {
+			// A big swarm is always a heavy fight, regardless of health or pool.
 			engageHeavy(true);
 		} else if (pvpPoolGoverned) {
 			pvpPoolBattle = true;
@@ -299,9 +303,10 @@ public class BattleStateMachine {
 		}
 	}
 
-	private void maybeUpgradeToHeavy(LocalPlayer player, boolean boss, boolean playerCombatHot) {
+	private void maybeUpgradeToHeavy(LocalPlayer player, boolean boss, boolean playerCombatHot, int count) {
 		if (heavyLatched) return;
 		boolean lowHp = player.getHealth() <= config.heavyHealthThreshold;
+		boolean manyMobs = count >= config.heavyAggroMobCount;
 		// in a pvp-pool battle (REGULAR/BOTH) low hp must NOT escalate to heavy, since pvp
 		// keeps you under the threshold constantly. only a boss escalates a pool-governed
 		// battle.
@@ -309,7 +314,7 @@ public class BattleStateMachine {
 		// Mid-battle PvP only escalates to heavy when the configured pool is HEAVY.
 		boolean pvpForcesHeavy = playerCombatHot
 				&& config.playerCombatMusicPool == BattleMusicConfig.PvpMusicPool.HEAVY;
-		if (boss || lowHpForcesHeavy || pvpForcesHeavy) {
+		if (boss || lowHpForcesHeavy || pvpForcesHeavy || manyMobs) {
 			BattleMusicClient.debug("Upgrading to HEAVY (boss={}, lowHp={} hp={}<={}, pvpPoolBattle={}, playerDamageTrigger={}, pvpPool={})",
 					boss, lowHp, player.getHealth(), config.heavyHealthThreshold,
 					pvpPoolBattle, playerCombatHot, config.playerCombatMusicPool);

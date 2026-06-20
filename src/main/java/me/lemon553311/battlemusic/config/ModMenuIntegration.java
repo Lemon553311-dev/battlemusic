@@ -10,6 +10,8 @@ import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.ChatFormatting;
 
 import java.util.ArrayList;
 
@@ -65,6 +67,18 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setTooltip(Component.literal("Verbose [DBG] logging to the game log, for troubleshooting."))
 				.setSaveConsumer(v -> c.debug = v)
 				.build());
+
+			// A clickable shortcut that opens the battle music folder in the OS file browser.
+		var lib = BattleMusicClient.library();
+		if (lib != null) {
+			general.addEntry(eb.startTextDescription(
+					Component.literal("Open the battle music folder")
+							.withStyle(s -> s
+									.withColor(ChatFormatting.AQUA)
+									.withUnderlined(true)
+									.withClickEvent(new ClickEvent.OpenFile(lib.getRootFolder()))))
+					.build());
+		}
 
 		// ---- Detection ------------------------------------------------------
 		ConfigCategory detection = builder.getOrCreateCategory(Component.literal("Detection"));
@@ -131,6 +145,12 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setTextGetter(v -> Component.literal(v + " HP (" + (v / 2.0) + " hearts)"))
 				.setTooltip(Component.literal("At or below this health, the music switches to heavy battle. 2 HP = 1 heart, so 6 HP = 3 hearts."))
 				.setSaveConsumer(v -> c.heavyHealthThreshold = v)
+				.build());
+		heavy.addEntry(eb.startIntSlider(Component.literal("Aggroed mobs to force heavy"),
+						c.heavyAggroMobCount, 1, 50)
+				.setDefaultValue(15)
+				.setTooltip(Component.literal("When this many mobs (or more) are aggroed on you, the fight is heavy no matter your health \u2014 a big swarm is always intense. Set above 'Aggroed mobs to start battle' to require a real horde."))
+				.setSaveConsumer(v -> c.heavyAggroMobCount = v)
 				.build());
 		heavy.addEntry(eb.startDoubleField(Component.literal("Regular -> Heavy crossfade (seconds)"), c.heavyCrossfadeSeconds)
 				.setDefaultValue(2.0).setMin(0.0).setMax(30.0)

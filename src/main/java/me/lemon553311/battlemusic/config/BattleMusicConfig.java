@@ -61,6 +61,10 @@ public class BattleMusicConfig {
 	// Heavy battle
 	/** Player health (in HP, 2 HP = 1 heart) at or below which battle becomes heavy */
 	public double heavyHealthThreshold = 6.0D;
+	/** Aggroed-mob count that forces HEAVY battle on its own. When this many mobs (or more)
+	 * are aggroed on you, the fight is heavy regardless of your health - a big swarm is always
+	 * intense. Editable in the mod menu. Default 15. */
+	public int heavyAggroMobCount = 15;
 	/** Length (seconds) of the crossfade when a battle escalates from regular to heavy.
 	 * The regular track fades down while the heavy track fades up over this same window,
 	 * so they overlap instead of hard-cutting. 0 = instant switch (no crossfade) */
@@ -163,6 +167,7 @@ public class BattleMusicConfig {
 		headAimToleranceDegrees = clampD(headAimToleranceDegrees, 1.0D, 180.0D);
 		aggroStickinessSeconds = clampD(aggroStickinessSeconds, 0.0D, 30.0D);
 		heavyHealthThreshold = clampD(heavyHealthThreshold, 0.0D, 1024.0D);
+		heavyAggroMobCount = (int) clampD(heavyAggroMobCount, 1, 200);
 		heavyCrossfadeSeconds = clampD(heavyCrossfadeSeconds, 0.0D, 30.0D);
 		bossRadius = clampD(bossRadius, 1.0D, 256.0D);
 		playerDamageThresholdHp = clampD(playerDamageThresholdHp, 1.0D, 200.0D);
