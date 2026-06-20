@@ -26,7 +26,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build
-        run: gradle build --no-daemon
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            gradle build --no-daemon -Pversion_override="${GITHUB_REF_NAME#v}"
+          else
+            gradle build --no-daemon
+          fi
 
       - name: Collect jar
         run: |

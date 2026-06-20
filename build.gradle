@@ -3,7 +3,7 @@ plugins {
 	id 'maven-publish'
 }
 
-version = project.mod_version
+version = project.hasProperty('version_override') ? project.version_override : project.mod_version
 group = project.maven_group
 
 base {
