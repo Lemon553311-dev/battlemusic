@@ -2,6 +2,8 @@
 
 This mod plays your imported music during mob/PVP battles. 
 
+Minecraft version support: 26.1 - 26.2
+
 ## Features
 
 - **Mob battles:** starts when 5 hostile mobs are aggroed on you.
