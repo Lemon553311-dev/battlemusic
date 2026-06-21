@@ -2,6 +2,7 @@ package me.lemon553311.battlemusic.config;
 
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import me.lemon553311.battlemusic.BattleMusicClient;
+import me.lemon553311.battlemusic.lasttotem.LastTotemFeature;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import com.terraformersmc.modmenu.api.ModMenuApi;
 
@@ -253,6 +254,38 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setTooltip(Component.literal("While inside the resume window, this many aggroed mobs is enough to re-start a battle, instead of the normal 'Aggroed mobs to start battle'. Lets the adrenaline keep going with fewer mobs right after a fight."))
 				.setSaveConsumer(v -> c.resumeAggroMobCount = v)
 				.build());
+
+		// ---- Last Totem Standing (secret, password-gated) -------------------
+		ConfigCategory secret = builder.getOrCreateCategory(Component.literal("Last Totem Standing"));
+		secret.addEntry(eb.startTextDescription(
+				Component.literal("A secret feature. Type the code below and click Save to unlock it, "
+						+ "then re-open this screen to see its toggle.")
+						.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
+				.build());
+		secret.addEntry(eb.startTextDescription(
+				Component.literal(c.lastTotemEnabled ? "Status: UNLOCKED" : "Status: LOCKED")
+						.withStyle(s -> s.withColor(c.lastTotemEnabled ? ChatFormatting.GREEN : ChatFormatting.RED)))
+				.build());
+		// Typing the password and clicking Save unlocks the feature. The code is
+		// never stored in the config; only the resulting unlock flag is.
+		secret.addEntry(eb.startStrField(Component.literal("Secret code"), "")
+				.setDefaultValue("")
+				.setTooltip(Component.literal("Enter the password and click Save to unlock Last Totem Standing."))
+				.setSaveConsumer(v -> {
+					if (v != null && v.trim().equalsIgnoreCase(LastTotemFeature.PASSWORD)) {
+						c.lastTotemEnabled = true;
+					}
+				})
+				.build());
+		// Once unlocked, expose a normal on/off toggle (shown after a reopen).
+		if (c.lastTotemEnabled) {
+			secret.addEntry(eb.startBooleanToggle(Component.literal("Enabled"), c.lastTotemEnabled)
+					.setDefaultValue(false)
+					.setTooltip(Component.literal("Turn the Last Totem Standing alert on or off. Plays a sound and "
+							+ "flashes an image when you drop to your last totem."))
+					.setSaveConsumer(v -> c.lastTotemEnabled = v)
+					.build());
+		}
 
 		return builder.build();
 	}

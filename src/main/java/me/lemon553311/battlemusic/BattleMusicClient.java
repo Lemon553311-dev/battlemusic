@@ -3,6 +3,7 @@ package me.lemon553311.battlemusic;
 import me.lemon553311.battlemusic.audio.AudioEngine;
 import me.lemon553311.battlemusic.audio.MusicLibrary;
 import me.lemon553311.battlemusic.config.BattleMusicConfig;
+import me.lemon553311.battlemusic.lasttotem.LastTotemFeature;
 import me.lemon553311.battlemusic.state.BattleStateMachine;
 
 import net.fabricmc.api.ClientModInitializer;
@@ -29,6 +30,7 @@ public class BattleMusicClient implements ClientModInitializer {
 	private static AudioEngine audioEngine;
 	private static MusicLibrary library;
 	private static BattleStateMachine stateMachine;
+	private static LastTotemFeature lastTotem;
 
 	@Override
 	public void onInitializeClient() {
@@ -41,6 +43,11 @@ public class BattleMusicClient implements ClientModInitializer {
         //audio engine
 		audioEngine = new AudioEngine();
 		stateMachine = new BattleStateMachine(config, audioEngine, library);
+
+		// Secret, password-gated "Last Totem Standing" alert (off unless unlocked).
+		lastTotem = new LastTotemFeature(config);
+		lastTotem.init();
+
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> audioEngine.init());
 		// On game close, stop playback deterministically: this interrupts the audio
 		// threads, closes their Java Sound lines and frees the native STB Vorbis

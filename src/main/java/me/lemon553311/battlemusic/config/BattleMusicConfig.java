@@ -119,6 +119,12 @@ public class BattleMusicConfig {
 	/** Verbose debug logging to the game log/console (INFO level, prefixed with [DBG]) */
 	public boolean debug = false;
 
+	// ---- Last Totem Standing (secret) ------------------------------------
+	/** Secret, password-gated "Last Totem Standing" alert. Disabled by default;
+	 * unlocked by typing the password in the mod menu. Persisted so it stays
+	 * unlocked across restarts. */
+	public boolean lastTotemEnabled = false;
+
 
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static Path path() {
