@@ -68,6 +68,7 @@ Edit in-game via Mod Menu, or by manually at `config/battlemusic.json`.
 - Lemon553311
 - user2378
 - Dragon6555
+- uxokpro1234
 
 ## License
 
