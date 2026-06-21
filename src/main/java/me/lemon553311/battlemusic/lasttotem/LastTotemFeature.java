@@ -119,12 +119,26 @@ public final class LastTotemFeature {
 		// so iterating it counts the offhand totem too.
 		int size = inv.getContainerSize();
 		for (int i = 0; i < size; i++) {
-			ItemStack stack = inv.getItem(i);
-			if (!stack.isEmpty() && stack.getItem() == Items.TOTEM_OF_UNDYING) {
-				total += stack.getCount();
+			if (isTotem(inv.getItem(i))) {
+				total += inv.getItem(i).getCount();
+			}
+		}
+		// A totem held on the mouse cursor (picked up inside any container screen)
+		// has left its inventory slot but is still in the player's possession. It
+		// lives on the open menu, not the Inventory container, so count it here too.
+		// Without this, moving the 2nd-to-last totem makes the count dip to 1 and
+		// false-triggers the alert. When no screen is open the carried stack is empty.
+		if (player.containerMenu != null) {
+			ItemStack carried = player.containerMenu.getCarried();
+			if (isTotem(carried)) {
+				total += carried.getCount();
 			}
 		}
 		return total;
+	}
+
+	private static boolean isTotem(ItemStack stack) {
+		return !stack.isEmpty() && stack.getItem() == Items.TOTEM_OF_UNDYING;
 	}
 
 	private void trigger(Minecraft client) {
