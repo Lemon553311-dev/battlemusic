@@ -56,7 +56,7 @@ public class ModMenuIntegration implements ModMenuApi {
 
 		ConfigEntryBuilder eb = builder.entryBuilder();
 
-		// ---- General --------------------------------------------------------
+		// General
 		ConfigCategory general = builder.getOrCreateCategory(Component.literal("General"));
 		general.addEntry(eb.startBooleanToggle(Component.literal("Enabled"), c.enabled)
 				.setDefaultValue(true)
@@ -81,7 +81,7 @@ public class ModMenuIntegration implements ModMenuApi {
 					.build());
 		}
 
-		// ---- Detection ------------------------------------------------------
+		// Detection
 		ConfigCategory detection = builder.getOrCreateCategory(Component.literal("Detection"));
 		detection.addEntry(eb.startIntSlider(Component.literal("Detection radius (blocks)"),
 						(int) Math.round(c.detectionRadius), 1, 128)
@@ -114,7 +114,7 @@ public class ModMenuIntegration implements ModMenuApi {
 				.build());
 		detection.addEntry(eb.startBooleanToggle(Component.literal("Require active engagement"), c.requireActiveEngagement)
 				.setDefaultValue(true)
-				.setTooltip(Component.literal("When on, mobs that just stand near you (stuck, out of reach, or only looking around) stop keeping the music going \u2014 it sustains only while mobs are actually approaching, circling, or attacking. Turn off for the old behavior, where any nearby hostile facing you keeps it alive."))
+				.setTooltip(Component.literal("When on, mobs that just stand near you (stuck, out of reach, or only looking around) stop keeping the music going, it sustains only while mobs are actually approaching, circling, or attacking. Turn off for the old behavior, where any nearby hostile facing you keeps it alive."))
 				.setSaveConsumer(v -> c.requireActiveEngagement = v)
 				.build());
 		detection.addEntry(eb.startBooleanToggle(Component.literal("Count attacking neutral mobs"), c.includeAttackingNeutrals)
@@ -138,7 +138,7 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setSaveConsumer(v -> c.headAimChecksPitch = v)
 				.build());
 
-		// ---- Heavy battle ---------------------------------------------------
+		// Heavy battle
 		ConfigCategory heavy = builder.getOrCreateCategory(Component.literal("Heavy Battle"));
 		heavy.addEntry(eb.startIntSlider(Component.literal("Heavy HP threshold"),
 						(int) Math.round(c.heavyHealthThreshold), 0, 40)
@@ -150,7 +150,7 @@ public class ModMenuIntegration implements ModMenuApi {
 		heavy.addEntry(eb.startIntSlider(Component.literal("Aggroed mobs to force heavy"),
 						c.heavyAggroMobCount, 1, 50)
 				.setDefaultValue(15)
-				.setTooltip(Component.literal("When this many mobs (or more) are aggroed on you, the fight is heavy no matter your health \u2014 a big swarm is always intense. Set above 'Aggroed mobs to start battle' to require a real horde."))
+				.setTooltip(Component.literal("When this many mobs (or more) are aggroed on you, the fight is heavy no matter your health, a big swarm is always intense. Set above 'Aggroed mobs to start battle' to require a real horde."))
 				.setSaveConsumer(v -> c.heavyAggroMobCount = v)
 				.build());
 		heavy.addEntry(eb.startDoubleField(Component.literal("Regular -> Heavy crossfade (seconds)"), c.heavyCrossfadeSeconds)
@@ -159,7 +159,7 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setSaveConsumer(v -> c.heavyCrossfadeSeconds = v)
 				.build());
 
-		// ---- PvP combat trigger --------------------------------------------
+		// PvP combat trigger
 		ConfigCategory playerCombat = builder.getOrCreateCategory(Component.literal("PvP Combat"));
 		playerCombat.addEntry(eb.startBooleanToggle(Component.literal("PvP trigger enabled"), c.playerDamageTriggerEnabled)
 				.setDefaultValue(true)
@@ -180,7 +180,7 @@ public class ModMenuIntegration implements ModMenuApi {
 				.build());
 		playerCombat.addEntry(eb.startDoubleField(Component.literal("Combat timeout (seconds)"), c.playerCombatTimeoutSeconds)
 				.setDefaultValue(10.0).setMin(1.0).setMax(600.0)
-				.setTooltip(Component.literal("How long PvP music keeps playing after the last hit from another player. It refreshes on every hit, so an active fight never cuts out, and the music ends this many calm seconds after the fight. This is the MAIN control for how long PvP music lingers \u2014 lower it for a snappier stop."))
+				.setTooltip(Component.literal("How long PvP music keeps playing after the last hit from another player. It refreshes on every hit, so an active fight never cuts out, and the music ends this many calm seconds after the fight. This is the MAIN control for how long PvP music lingers, lower it for a snappier stop."))
 				.setSaveConsumer(v -> c.playerCombatTimeoutSeconds = v)
 				.build());
 		playerCombat.addEntry(eb.startEnumSelector(Component.literal("PvP music pool"),
@@ -199,7 +199,7 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setSaveConsumer(v -> c.playerCombatMusicPool = v)
 				.build());
 
-		// ---- Bosses ---------------------------------------------------------
+		// Bosses
 		ConfigCategory boss = builder.getOrCreateCategory(Component.literal("Bosses"));
 		boss.addEntry(eb.startIntSlider(Component.literal("Boss detection radius (blocks)"),
 						(int) Math.round(c.bossRadius), 1, 256)
@@ -218,7 +218,7 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setSaveConsumer(v -> c.includeMiniBosses = v)
 				.build());
 
-		// ---- Fades & timing -------------------------------------------------
+		// Fades & timing
 		ConfigCategory fades = builder.getOrCreateCategory(Component.literal("Fades & Timing"));
 		fades.addEntry(eb.startDoubleField(Component.literal("Fade-out delay (seconds)"), c.fadeOutDelaySeconds)
 				.setDefaultValue(15.0).setMin(0.0).setMax(600.0)
@@ -236,7 +236,7 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setSaveConsumer(v -> c.fadeInDurationSeconds = v)
 				.build());
 
-		// ---- Battle resume ("continue the heat") ---------------------------
+		// Battle resume ("continue the heat")
 		ConfigCategory resume = builder.getOrCreateCategory(Component.literal("Battle Resume"));
 		resume.addEntry(eb.startBooleanToggle(Component.literal("Resume enabled"), c.battleResumeEnabled)
 				.setDefaultValue(true)
@@ -255,34 +255,35 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setSaveConsumer(v -> c.resumeAggroMobCount = v)
 				.build());
 
-		// ---- Last Totem Standing (secret, password-gated) -------------------
-		ConfigCategory secret = builder.getOrCreateCategory(Component.literal("Last Totem Standing"));
-		secret.addEntry(eb.startTextDescription(
-				Component.literal("A secret feature. Type the code below and click Save to unlock it, "
-						+ "then re-open this screen to see its toggle.")
-						.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
-				.build());
-		secret.addEntry(eb.startTextDescription(
-				Component.literal(c.lastTotemEnabled ? "Status: UNLOCKED" : "Status: LOCKED")
-						.withStyle(s -> s.withColor(c.lastTotemEnabled ? ChatFormatting.GREEN : ChatFormatting.RED)))
-				.build());
-		// Typing the password and clicking Save unlocks the feature. The code is
-		// never stored in the config; only the resulting unlock flag is.
-		secret.addEntry(eb.startStrField(Component.literal("Secret code"), "")
-				.setDefaultValue("")
-				.setTooltip(Component.literal("Enter the password and click Save to unlock Last Totem Standing."))
-				.setSaveConsumer(v -> {
-					if (v != null && v.trim().equalsIgnoreCase(LastTotemFeature.PASSWORD)) {
-						c.lastTotemEnabled = true;
-					}
-				})
-				.build());
-		// Once unlocked, expose a normal on/off toggle (shown after a reopen).
-		if (c.lastTotemEnabled) {
+		// Hidden feature (password-gated)
+		// Stays disguised as a plain "Advanced" tab until the code is entered.
+		// Only after unlocking does the real name and description appear.
+		ConfigCategory secret = builder.getOrCreateCategory(
+				Component.literal(c.lastTotemEnabled ? "Last Totem Standing" : "Advanced"));
+		if (!c.lastTotemEnabled) {
+			// Locked: give away nothing about what this is or what it does.
+			secret.addEntry(eb.startTextDescription(
+					Component.literal("Got a code? Enter it below and click Save.")
+							.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
+					.build());
+			secret.addEntry(eb.startStrField(Component.literal("Code"), "")
+					.setDefaultValue("")
+					.setTooltip(Component.literal("Enter a code and click Save."))
+					.setSaveConsumer(v -> {
+						if (v != null && v.trim().equalsIgnoreCase(LastTotemFeature.PASSWORD)) {
+							c.lastTotemEnabled = true;
+						}
+					})
+					.build());
+		} else {
+			// Unlocked: now it is safe to reveal the name and a normal on/off toggle.
+			secret.addEntry(eb.startTextDescription(
+					Component.literal("Plays a sound and flashes an image when you drop to your last totem.")
+							.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
+					.build());
 			secret.addEntry(eb.startBooleanToggle(Component.literal("Enabled"), c.lastTotemEnabled)
 					.setDefaultValue(false)
-					.setTooltip(Component.literal("Turn the Last Totem Standing alert on or off. Plays a sound and "
-							+ "flashes an image when you drop to your last totem."))
+					.setTooltip(Component.literal("Turn the Last Totem Standing alert on or off."))
 					.setSaveConsumer(v -> c.lastTotemEnabled = v)
 					.build());
 		}
