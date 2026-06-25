@@ -5,13 +5,11 @@
 	"name": "Battle Music",
 	"description": "Plays your own imported music during fights! Client-side, smooth fades, dynamic changes, very customizable.",
 	"authors": [
-                "Lemon553311",
-                "user2378",
-                "uxokpro1234"
+                "Lemon553311"
                 ],
 
 	"contact": {
-      "discords":"lemon553311, uxokpro1234"
+      "discords":"Lemon553311"
     },
 
 	"license": "MIT",
