@@ -109,7 +109,6 @@ public class BossDetector {
 		}
 		EntityType<?> type = e.getType();
 		var key = BuiltInRegistries.ENTITY_TYPE.getKey(type);
-		if (key == null) return false;
 		String id = key.toString();
 		if (config.includeMiniBosses && MINI_BOSS_IDS.contains(id)) return true;
 		return extraBossIds.contains(id);

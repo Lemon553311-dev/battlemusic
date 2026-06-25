@@ -131,6 +131,7 @@ public class BattleMusicConfig {
 		return FabricLoader.getInstance().getConfigDir().resolve("battlemusic.json");
 	}
 
+	@SuppressWarnings("null")
 	public static BattleMusicConfig load() {
 		Path p = path();
 

@@ -7,7 +7,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.LocalPlayer;
@@ -41,7 +40,8 @@ import net.minecraft.world.item.Items;
  */
 public final class LastTotemFeature {
 
-	/** The password that unlocks the feature from the mod menu. */
+	// good job you found the password to this not so hidden feature. Have fun!
+	// Input it in the "Advanced" tab in the modmenu (or just enable it in the config lmao)
 	public static final String PASSWORD = "lmao";
 
 	// Bundled at assets/battlemusic/textures/gui/last_totem_standing.png

@@ -22,24 +22,9 @@ import java.nio.file.Path;
  * @author Lemon553311
  * @author uxokpro1234
  * @author user2378
- * The brain. Runs every client tick and decides what should be playing.
- *
- * Battle lifecycle (hysteresis):
- *   - A battle STARTS when the aggroed-mob count reaches the threshold, or a
- *     boss is nearby.
- *   - It KEEPS PLAYING until the count drops to 0 and no boss remains. Dipping
- *     from 5 to 4 does not stop it.
- *   - Once the count hits 0 (and no boss), a grace timer runs; if nothing
- *     re-aggros within fadeOutDelaySeconds, the music fades out over
- *     fadeOutDurationSeconds. Any re-aggro during grace/fade cancels it.
- *
- * Heavy battle:
- *   - Engaged when, during an active battle, the player's health is at or below
- *     the threshold, or a boss is present.
- *   - Latched: once heavy, it stays heavy until the whole battle ends, even if
- *     the player heals back up. The switch from regular to heavy is immediate.
- *
- * Mojang official mappings (Minecraft 26.1): Minecraft, LocalPlayer, ClientLevel.
+ * 
+ * it actually gets worse! 
+ * 
  */
 
 public class BattleStateMachine {
@@ -59,32 +44,20 @@ public class BattleStateMachine {
 	private boolean battleActive = false;
 	private boolean heavyLatched = false;
 	private double graceSecondsLeft = 0.0;
-	// true only while the battle is held up by mobs or a boss. drives how it winds down:
-	// a mob/boss battle keeps the re-aggro grace window when it clears, but a pvp-only
-	// battle fades the moment the combat timer goes cold (the timeout already buffers pvp,
-	// no point stacking grace on top).
 	private boolean battleHeldByMobsOrBoss = false;
 	private double playerCombatSecondsLeft = 0.0;
 	private boolean playerCombatWasHot = false;
-	// Death handling: hold the current battle music through the death screen, then
-	// cut it the instant the player respawns. Tracks the dead -> alive edge so the
-	// stop fires exactly once on respawn, not every tick of the death screen.
+	// keep music on death screen and no more after respawn
 	private boolean playerWasDead = false;
-	// Max time to hold battle music on the death screen before fading out, so a
-	// hardcore death (no respawn) or an idle death screen never holds it forever.
 	private static final double DEATH_HOLD_MAX_SECONDS = 15.0;
 	private double deathHoldSecondsLeft = 0.0;
 	// battle started from the pvp trigger with pool=BOTH: re-rolls in REGULAR phase keep
 	// picking from both folders.
 	private boolean regularUsesBothPool = false;
-	// battle started from the pvp trigger with a non-HEAVY pool (REGULAR or BOTH). low hp
-	// must NOT force heavy here since pvp keeps you low constantly, only a boss escalates.
-	// reset on every battle start / fade-out / respawn / disconnect.
+	// track music for pvp n shit
 	private boolean pvpPoolBattle = false;
 
-	// Battle resume ("continue the heat"): when a battle ends, remember the track
-	// each channel was playing and where it was, so a new battle that starts soon
-	// after picks up where it left off instead of restarting from 0:00.
+	// resume battle
 	private Path resumeRegularFile = null;
 	private long resumeRegularFrame = 0L;
 	private Path resumeHeavyFile = null;
@@ -93,11 +66,8 @@ public class BattleStateMachine {
 
 	private long lastTickNanos = 0L;
 	private double debugAccum = 0.0;
-	// our own tick counter, +1 per evaluated tick. used as the clock for all tick-based
-	// detection (aggro stickiness, pvp damage window, boss-scan throttle) instead of
-	// world.getGameTime(). time-locked servers (hypixel etc.) freeze getGameTime(), which
-	// froze the pvp window so it never drained and the music never stopped. a counter we
-	// own always ticks.
+	// count ticks independently cuz time can stop apparently on servers
+	// why is this even a thing
 	private long clientTick = 0L;
 
 	public BattleStateMachine(BattleMusicConfig config, AudioEngine engine, MusicLibrary library) {
@@ -116,8 +86,6 @@ public class BattleStateMachine {
 
 		if (!engine.isReady()) return;
 
-		// volume follows minecraft's own sliders (master x music), so battle music
-		// respects the in-game sound options like any other music.
 		float mcVolume = client.options.getSoundSourceVolume(SoundSource.MASTER)
 				* client.options.getSoundSourceVolume(SoundSource.MUSIC);
 		regularChannel.setOutputVolume(mcVolume);
@@ -136,26 +104,16 @@ public class BattleStateMachine {
 			return;
 		}
 
-		// --- Death & respawn --------------------------------------------------
-		// Keep whatever is currently playing going through the death screen (a boss
-		// kill should still be blaring while you stare at "You Died"), then cut it the
-		// moment the player respawns. While dead the state machine is frozen: no
-		// detection, no grace/fade-out timer, gain held where it was. The death screen
-		// does not pause the world, so this still runs every client tick.
+
 		if (player.isDeadOrDying()) {
 			if (!playerWasDead) {
 				playerWasDead = true;
 				deathHoldSecondsLeft = DEATH_HOLD_MAX_SECONDS;
-				BattleMusicClient.debug("Player died; holding battle music through the death screen (max {}s)", DEATH_HOLD_MAX_SECONDS);
 			}
-			// Bounded hold: normally the player respawns within a few seconds and the
-			// dead -> alive edge below cuts the music. A hardcore death (no respawn,
-			// spectator) or just idling on the death screen would otherwise hold the
-			// battle music forever, so fade it out once the cap elapses.
+			// handle fade out if player stay on death screen for some reason
 			if (deathHoldSecondsLeft > 0.0) {
 				deathHoldSecondsLeft -= dt;
 				if (deathHoldSecondsLeft <= 0.0 && battleActive) {
-					BattleMusicClient.debug("Death-hold cap reached; fading out battle music (hardcore/idle death screen)");
 					beginFadeOut(false);
 				}
 			}
@@ -163,11 +121,8 @@ public class BattleStateMachine {
 			return;
 		}
 		if (playerWasDead) {
-			// Dead last tick, alive now => the player just respawned. Cut the music
-			// cleanly and forget any resume point so the held track can't bleed into
-			// the fresh life; the next real battle starts from silence.
+			//stop music kthx
 			playerWasDead = false;
-			BattleMusicClient.debug("Player respawned; stopping battle music");
 			stopForRespawn();
 			tickChannels(dt);
 			return;
@@ -649,3 +604,5 @@ public class BattleStateMachine {
 		bosses.refreshExtraIds();
 	}
 }
+
+// easter egg

@@ -49,9 +49,6 @@ public class BattleMusicClient implements ClientModInitializer {
 		lastTotem.init();
 
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> audioEngine.init());
-		// On game close, stop playback deterministically: this interrupts the audio
-		// threads, closes their Java Sound lines and frees the native STB Vorbis
-		// decoders, instead of leaving it to daemon-thread reaping at JVM exit
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
 			stateMachine.reset();
 			audioEngine.shutdown();
@@ -60,7 +57,8 @@ public class BattleMusicClient implements ClientModInitializer {
 
 		//music mute on l;eave
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> stateMachine.reset());
-
+		
+		// trying to figure out why tf it doesn't work
 		LOGGER.info("Battle Music initialised. Music folder: {} ({} regular, {} heavy track(s) found)",
 				library.getRootFolder(), library.regularCount(), library.heavyCount());
 		LOGGER.info("Battle Music config: enabled={}, debug={}, aggroMobCount={}, detectionRadius={}, "
