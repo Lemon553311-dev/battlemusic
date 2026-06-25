@@ -6,7 +6,6 @@ import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.monster.warden.Warden;
 
 /**
- * @author Lemon553311
  *
  * A few mob types leak their aggressive state through synced entity data, so we
  * can read them directly instead of guessing from movement. These are treated

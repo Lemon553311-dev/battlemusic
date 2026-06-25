@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * @author Lemon553311
  *
  * Approximates how many hostile mobs are aggroed on the player.
  *

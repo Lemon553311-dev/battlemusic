@@ -20,7 +20,6 @@ import static org.lwjgl.stb.STBVorbis.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 /**
- * @author user2378
  *
  * One playback voice. Streams an Ogg Vorbis file on its own daemon thread: it
  * decodes a small chunk at a time with STB Vorbis (the decoder LWJGL/Minecraft

@@ -3,6 +3,10 @@
 This mod plays your imported music during mob/PVP battles.
 **Version support: Minecraft 26.1 and 26.2**
 
+## AI Disclosure Notice
+
+This project was fully created with AI from start to finish. Everything you see here in this repository is generated with AI. Disapointing, I know. AI is heavily frowned upon due to its huge impact on the environment, causing a disaster in the job market, getting added into virtually every app that exists and causing enshittification with it. **It's entirely up to you whether you want to use this mod or not.** Personally, the reason I generated this mod was because there was no mod that would play battle music unless it was installed on the server or had no convoluted setup steps with the resource packs. AI has perfectly bridged this gap by making it exactly how I wanted it. Why am I publishing this? Well... why not? It's not necessarily AI slop. The mod works great as far as I can see.
+
 ## Features
 
 - **Mob battles:** starts when 5 hostile mobs are aggroed on you.
@@ -63,16 +67,6 @@ Edit in-game via Mod Menu, or by manually at `config/battlemusic.json`.
 | `enabled`                    | true    | Disable or enable battle music on/off                                        |
 | `debug`                      | false   | Enable debug logging                                                         |
 
-## Credits
-
-- Lemon553311
-- user2378
-- Dragon6555
-- uxokpro1234
-
 ## License
 
 MIT LICENSE
-
-## Bragging
-![img.png](bragging.png)

@@ -3,7 +3,6 @@ package me.lemon553311.battlemusic.audio;
 import me.lemon553311.battlemusic.BattleMusicClient;
 
 /**
- * @author Lemon553311, user2378
  *
  * Audio is played through the Java Sound API (javax.sound.sampled) on dedicated
  * per-channel background threads, completely independent of Minecraft's OpenAL

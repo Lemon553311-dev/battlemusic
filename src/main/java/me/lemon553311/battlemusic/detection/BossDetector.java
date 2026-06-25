@@ -18,7 +18,6 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * @author Dragon6555
  *
  * Detects special bosses near the player. Any boss present forces heavy battle
  * music and uses its own (larger) radius, since bosses are big fights that the

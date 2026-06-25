@@ -12,7 +12,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
 /**
- * @author Dragon6555
  * Owns the on-disk music folders and the random track picker.
  *
  * Layout (created automatically on first launch):
