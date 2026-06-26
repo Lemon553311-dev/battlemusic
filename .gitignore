@@ -5,3 +5,4 @@ run/
 *.iml
 out/
 .vscode/
+.kilo
