@@ -7,3 +7,4 @@ out/
 .vscode/
 .kilo
 .devcontainer
+desktop.sh
