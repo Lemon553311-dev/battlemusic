@@ -307,7 +307,10 @@ public class BattleStateMachine {
 		// refreshFinishedTracks() roll the next one so it stays varied instead of one song
 		// on repeat.
 		boolean loop = library.regularCount() <= 1;
-		if (track != null && regularChannel.start(track, loop, startFrame)) {
+		// per-song "start at" only applies on a fresh start; a resume keeps its frame.
+		double startSec = (startFrame > 0L) ? 0.0 : library.startSecondsFor(track);
+		regularChannel.setTrackGain(library.effectiveVolumeFor(track));
+		if (track != null && regularChannel.start(track, loop, startFrame, startSec)) {
 			regularChannel.fadeTo(1f, config.fadeInDurationSeconds, false);
 			heavyChannel.fadeTo(0f, 0.25, true);
 		} else {
@@ -351,7 +354,9 @@ public class BattleStateMachine {
 		// loop only with a single heavy track, else play through and continue via
 		// refreshFinishedTracks().
 		boolean loop = (library.hasHeavy() ? library.heavyCount() : library.regularCount()) <= 1;
-		if (heavyChannel.start(track, loop, startFrame)) {
+		double startSec = (startFrame > 0L) ? 0.0 : library.startSecondsFor(track);
+		heavyChannel.setTrackGain(library.effectiveVolumeFor(track));
+		if (heavyChannel.start(track, loop, startFrame, startSec)) {
 			boolean crossfading = regularChannel.isAudible();
 			double heavyInSeconds = crossfading ? config.heavyCrossfadeSeconds : config.fadeInDurationSeconds;
 			regularChannel.fadeTo(0f, config.heavyCrossfadeSeconds, true);
@@ -391,7 +396,9 @@ public class BattleStateMachine {
 		// loop only when the combined pool has a single track, else play through and roll the
 		// next one via refreshFinishedTracks().
 		boolean loop = (library.regularCount() + library.heavyCount()) <= 1;
-		if (track != null && regularChannel.start(track, loop, startFrame)) {
+		double startSec = (startFrame > 0L) ? 0.0 : library.startSecondsFor(track);
+		regularChannel.setTrackGain(library.effectiveVolumeFor(track));
+		if (track != null && regularChannel.start(track, loop, startFrame, startSec)) {
 			regularChannel.fadeTo(1f, config.fadeInDurationSeconds, false);
 			heavyChannel.fadeTo(0f, 0.25, true);
 		} else {

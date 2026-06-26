@@ -1,6 +1,7 @@
 package me.lemon553311.battlemusic.audio;
 
 import me.lemon553311.battlemusic.BattleMusicClient;
+import me.lemon553311.battlemusic.config.BattleMusicConfig;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -106,14 +107,91 @@ public class MusicLibrary {
 		return heavy.size();
 	}
 
+	// Snapshots of the current track lists (used by the mod-menu Songs tab).
+	public synchronized List<Path> regularTracks() {
+		return new ArrayList<>(regular);
+	}
+	public synchronized List<Path> heavyTracks() {
+		return new ArrayList<>(heavy);
+	}
+
+	/** Stable per-song key: "<folder>/<filename>", matching the config map keys. */
+	public String keyFor(Path p) {
+		if (p == null) return "";
+		Path parent = p.getParent();
+		String folder = (parent != null && parent.getFileName() != null) ? parent.getFileName().toString() : "";
+		return folder + "/" + p.getFileName().toString();
+	}
+
+	private boolean isHeavyPath(Path p) {
+		Path parent = (p == null) ? null : p.getParent();
+		return parent != null && parent.getFileName() != null
+				&& HEAVY_DIR.equals(parent.getFileName().toString());
+	}
+
+	private BattleMusicConfig.SongSetting settingFor(Path p) {
+		BattleMusicConfig cfg = BattleMusicClient.config();
+		if (cfg == null || cfg.songSettings == null) return null;
+		return cfg.songSettings.get(keyFor(p));
+	}
+
+	/** Seconds into this track where playback should start, from its per-song setting. */
+	public double startSecondsFor(Path p) {
+		BattleMusicConfig.SongSetting s = settingFor(p);
+		return (s != null) ? Math.max(0.0, s.startSeconds) : 0.0;
+	}
+
+	/** Folder volume * per-song volume for this track (1.0 = unchanged). */
+	public float effectiveVolumeFor(Path p) {
+		BattleMusicConfig cfg = BattleMusicClient.config();
+		double folderVol = 1.0;
+		if (cfg != null) folderVol = isHeavyPath(p) ? cfg.heavyFolderVolume : cfg.regularFolderVolume;
+		BattleMusicConfig.SongSetting s = settingFor(p);
+		double songVol = (s != null) ? s.volume : 1.0;
+		return (float) Math.max(0.0, folderVol * songVol);
+	}
+
+	private double weightOf(Path p) {
+		BattleMusicConfig.SongSetting s = settingFor(p);
+		double w = (s != null) ? s.weight : 50.0;
+		return Math.max(0.0, w);
+	}
+
+	// Weighted random pick honouring per-song weights, still avoiding an immediate
+	// repeat. Falls back to uniform when every weight is zero.
+	private Path pickWeighted(List<Path> list, Path avoid) {
+		if (list.isEmpty()) return null;
+		if (list.size() == 1) return list.get(0);
+		double total = 0.0;
+		for (Path p : list) total += weightOf(p);
+		if (total <= 0.0) return pick(list, avoid); // all excluded -> behave as before
+		Path choice = list.get(list.size() - 1);
+		int guard = 0;
+		do {
+			double r = ThreadLocalRandom.current().nextDouble() * total;
+			double acc = 0.0;
+			for (Path p : list) {
+				acc += weightOf(p);
+				if (r <= acc) { choice = p; break; }
+			}
+		} while (choice.equals(avoid) && positiveWeightCount(list) > 1 && guard++ < 8);
+		return choice;
+	}
+
+	private int positiveWeightCount(List<Path> list) {
+		int n = 0;
+		for (Path p : list) if (weightOf(p) > 0.0) n++;
+		return n;
+	}
+
 	public synchronized Path pickRegular() {
-		lastRegular = pick(regular, lastRegular);
+		lastRegular = pickWeighted(regular, lastRegular);
 		BattleMusicClient.debug("Picked regular track: {}", lastRegular == null ? "<none>" : lastRegular.getFileName());
 		return lastRegular;
 	}
 
 	public synchronized Path pickHeavy() {
-		lastHeavy = pick(heavy, lastHeavy);
+		lastHeavy = pickWeighted(heavy, lastHeavy);
 		BattleMusicClient.debug("Picked heavy track: {}", lastHeavy == null ? "<none>" : lastHeavy.getFileName());
 		return lastHeavy;
 	}
@@ -129,7 +207,7 @@ public class MusicLibrary {
 			union.addAll(regular);
 			union.addAll(heavy);
 		}
-		lastBoth = pick(union, lastBoth);
+		lastBoth = pickWeighted(union, lastBoth);
 		BattleMusicClient.debug("Picked track (PvP both-pool): {}", lastBoth == null ? "<none>" : lastBoth.getFileName());
 		return lastBoth;
 	}

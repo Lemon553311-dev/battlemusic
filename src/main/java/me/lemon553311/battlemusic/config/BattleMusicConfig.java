@@ -125,6 +125,24 @@ public class BattleMusicConfig {
 	 * unlocked across restarts. */
 	public boolean lastTotemEnabled = false;
 
+	// ---- Per-folder / per-song music controls ----------------------------
+	/** Volume multiplier for the whole Regular Battle folder (1.0 = 100% = unchanged). */
+	public double regularFolderVolume = 1.0;
+	/** Volume multiplier for the whole Heavy Battle folder (1.0 = 100% = unchanged). */
+	public double heavyFolderVolume = 1.0;
+	/** Per-song settings, keyed by "<folder>/<filename>" (e.g. "Heavy Battle/boss.ogg"). */
+	public java.util.Map<String, SongSetting> songSettings = new java.util.HashMap<>();
+
+	/** Per-song volume, start offset, and pick weight. Defaults leave a song unchanged. */
+	public static class SongSetting {
+		/** Volume multiplier, 0..2 (1.0 = 100% = unchanged, >1 boosts a quiet track). */
+		public double volume = 1.0;
+		/** Seconds into the track where playback starts on a fresh (non-resume) start. */
+		public double startSeconds = 0.0;
+		/** Relative pick weight 0..100 (all equal = equal chance; 0 = never plays). */
+		public double weight = 50.0;
+	}
+
 
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static Path path() {
@@ -187,6 +205,15 @@ public class BattleMusicConfig {
 		resumeAggroMobCount = (int) clampD(resumeAggroMobCount, 1, 200);
 		if (extraBossIds == null) extraBossIds = new ArrayList<>();
 		if (playerCombatMusicPool == null) playerCombatMusicPool = PvpMusicPool.HEAVY;
+		regularFolderVolume = clampD(regularFolderVolume, 0.0, 2.0);
+		heavyFolderVolume = clampD(heavyFolderVolume, 0.0, 2.0);
+		if (songSettings == null) songSettings = new java.util.HashMap<>();
+		for (SongSetting s : songSettings.values()) {
+			if (s == null) continue;
+			s.volume = clampD(s.volume, 0.0, 2.0);
+			s.startSeconds = clampD(s.startSeconds, 0.0, 100000.0);
+			s.weight = clampD(s.weight, 0.0, 100.0);
+		}
 	}
 
 	private static double clampD(double v, double lo, double hi) {

@@ -8,6 +8,9 @@ import com.terraformersmc.modmenu.api.ModMenuApi;
 
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
+import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
+import me.lemon553311.battlemusic.audio.MusicLibrary;
+import me.lemon553311.battlemusic.preview.PreviewRegistry;
 
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -15,6 +18,8 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.ChatFormatting;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.nio.file.Path;
 
 /**
  * ModMenu integration. Adds the "Config" button next to Battle Music in the
@@ -69,17 +74,9 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setSaveConsumer(v -> c.debug = v)
 				.build());
 
-			// A clickable shortcut that opens the battle music folder in the OS file browser.
-		var lib = BattleMusicClient.library();
-		if (lib != null) {
-			general.addEntry(eb.startTextDescription(
-					Component.literal("Open the battle music folder")
-							.withStyle(s -> s
-									.withColor(ChatFormatting.AQUA)
-									.withUnderlined(true)
-									.withClickEvent(new ClickEvent.OpenFile(lib.getRootFolder()))))
-					.build());
-		}
+		// ---- Songs (second tab): per-folder + per-song volume, preview,
+		// start-at, frequency, and the moved "open folder" shortcut. ----
+		buildSongsCategory(builder, eb, c);
 
 		// Detection
 		ConfigCategory detection = builder.getOrCreateCategory(Component.literal("Detection"));
@@ -289,5 +286,162 @@ public class ModMenuIntegration implements ModMenuApi {
 		}
 
 		return builder.build();
+	}
+
+	// ===== Songs tab =====================================================
+
+	private static void buildSongsCategory(ConfigBuilder builder, ConfigEntryBuilder eb, BattleMusicConfig c) {
+		ConfigCategory songs = builder.getOrCreateCategory(Component.literal("Songs"));
+		MusicLibrary lib = BattleMusicClient.library();
+		if (lib == null) {
+			songs.addEntry(eb.startTextDescription(
+					Component.literal("Music library unavailable.").withStyle(s -> s.withColor(ChatFormatting.GRAY)))
+					.build());
+			return;
+		}
+
+		// Refresh so newly added files show up the moment the screen opens.
+		lib.rescan();
+
+		songs.addEntry(eb.startTextDescription(Component.literal(
+				"Per-song and per-folder controls for every track. Click \u25B6 Preview to hear a track at "
+				+ "its configured volume and start point (works while you're in a world). Volumes are %, "
+				+ "100% = unchanged. Frequency sets how often a track is picked relative to the others in "
+				+ "its folder. Click Save to apply.")
+				.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
+				.build());
+
+		// Open-folder shortcut, moved here from the General tab.
+		songs.addEntry(eb.startTextDescription(
+				Component.literal("\uD83D\uDCC1 Open the battle music folder")
+						.withStyle(s -> s
+								.withColor(ChatFormatting.AQUA)
+								.withUnderlined(true)
+								.withClickEvent(new ClickEvent.OpenFile(lib.getRootFolder()))))
+				.build());
+
+		// Stop any preview that is currently playing.
+		songs.addEntry(eb.startTextDescription(
+				Component.literal("\u23F9 Stop preview")
+						.withStyle(s -> s
+								.withColor(ChatFormatting.RED)
+								.withUnderlined(true)
+								.withClickEvent(new ClickEvent.RunCommand("/battlemusic stoppreview"))))
+				.build());
+
+		// Per-folder volume.
+		songs.addEntry(eb.startIntSlider(Component.literal("Regular Battle folder volume"),
+						(int) Math.round(c.regularFolderVolume * 100), 0, 200)
+				.setDefaultValue(100)
+				.setTextGetter(v -> Component.literal(v + "%"))
+				.setTooltip(Component.literal("Volume for the whole Regular Battle folder. Multiplies with each song's own volume."))
+				.setSaveConsumer(v -> c.regularFolderVolume = v / 100.0)
+				.build());
+		songs.addEntry(eb.startIntSlider(Component.literal("Heavy Battle folder volume"),
+						(int) Math.round(c.heavyFolderVolume * 100), 0, 200)
+				.setDefaultValue(100)
+				.setTextGetter(v -> Component.literal(v + "%"))
+				.setTooltip(Component.literal("Volume for the whole Heavy Battle folder. Multiplies with each song's own volume."))
+				.setSaveConsumer(v -> c.heavyFolderVolume = v / 100.0)
+				.build());
+
+		// Index list shared with the preview command (regular first, then heavy).
+		List<Path> previewOrder = new ArrayList<>();
+		addFolderSongs(songs, eb, c, lib, "Regular Battle", lib.regularTracks(), previewOrder);
+		addFolderSongs(songs, eb, c, lib, "Heavy Battle", lib.heavyTracks(), previewOrder);
+		PreviewRegistry.setEntries(previewOrder);
+	}
+
+	private static void addFolderSongs(ConfigCategory songs, ConfigEntryBuilder eb, BattleMusicConfig c,
+			MusicLibrary lib, String folderLabel, List<Path> tracks, List<Path> previewOrder) {
+		songs.addEntry(eb.startTextDescription(
+				Component.literal("\u2500\u2500 " + folderLabel + " (" + tracks.size() + ") \u2500\u2500")
+						.withStyle(s -> s.withColor(ChatFormatting.GOLD)))
+				.build());
+
+		if (tracks.isEmpty()) {
+			songs.addEntry(eb.startTextDescription(
+					Component.literal("No .ogg files in this folder yet.").withStyle(s -> s.withColor(ChatFormatting.DARK_GRAY)))
+					.build());
+			return;
+		}
+
+		// Total saved weight in this folder, for the live (approximate) % readout.
+		double folderTotal = 0.0;
+		for (Path p : tracks) folderTotal += savedWeight(c, lib.keyFor(p));
+		final double folderTotalAtOpen = folderTotal;
+
+		for (Path path : tracks) {
+			final int index = previewOrder.size();
+			previewOrder.add(path);
+
+			final String key = lib.keyFor(path);
+			final String fileName = path.getFileName().toString();
+			final double savedVol = savedVolume(c, key);
+			final double savedStartSec = savedStart(c, key);
+			final double savedW = savedWeight(c, key);
+
+			List<AbstractConfigListEntry> kids = new ArrayList<>();
+
+			// Preview button: fires the client command, which plays immediately.
+			kids.add(eb.startTextDescription(
+					Component.literal("\u25B6 Preview")
+							.withStyle(s -> s
+									.withColor(ChatFormatting.GREEN)
+									.withUnderlined(true)
+									.withClickEvent(new ClickEvent.RunCommand("/battlemusic preview " + index))))
+					.build());
+
+			// Per-song volume.
+			kids.add(eb.startIntSlider(Component.literal("Volume"),
+							(int) Math.round(savedVol * 100), 0, 200)
+					.setDefaultValue(100)
+					.setTextGetter(v -> Component.literal(v + "%"))
+					.setTooltip(Component.literal("This track's volume. Multiplies with the folder volume. 100% = unchanged, >100% boosts a quiet track."))
+					.setSaveConsumer(v -> setting(c, key).volume = v / 100.0)
+					.build());
+
+			// Start at (seconds).
+			kids.add(eb.startDoubleField(Component.literal("Start at (seconds)"), savedStartSec)
+					.setDefaultValue(0.0).setMin(0.0).setMax(100000.0)
+					.setTooltip(Component.literal("Seconds into the track where playback begins on a fresh start. 0 = from the beginning. (A battle resume still continues where it left off.)"))
+					.setSaveConsumer(v -> setting(c, key).startSeconds = v)
+					.build());
+
+			// Frequency / pick weight, with a live normalized % readout.
+			kids.add(eb.startIntSlider(Component.literal("Frequency"),
+							(int) Math.round(savedW), 0, 100)
+					.setDefaultValue(50)
+					.setTextGetter(v -> {
+						if (v <= 0) return Component.literal("never");
+						double denom = folderTotalAtOpen - savedW + v;
+						double pct = denom > 0 ? (v * 100.0 / denom) : 0.0;
+						return Component.literal(String.format("\u2248%.0f%% of this folder", pct));
+					})
+					.setTooltip(Component.literal("How often this track is picked relative to the others in its folder. Raising it lowers everyone else's share; 0 = never plays. The % is approximate until you Save."))
+					.setSaveConsumer(v -> setting(c, key).weight = v)
+					.build());
+
+			songs.addEntry(eb.startSubCategory(Component.literal("\u266A " + fileName), kids)
+					.setExpanded(false)
+					.build());
+		}
+	}
+
+	private static BattleMusicConfig.SongSetting setting(BattleMusicConfig c, String key) {
+		if (c.songSettings == null) c.songSettings = new java.util.HashMap<>();
+		return c.songSettings.computeIfAbsent(key, k -> new BattleMusicConfig.SongSetting());
+	}
+	private static double savedVolume(BattleMusicConfig c, String key) {
+		BattleMusicConfig.SongSetting s = (c.songSettings == null) ? null : c.songSettings.get(key);
+		return s != null ? s.volume : 1.0;
+	}
+	private static double savedStart(BattleMusicConfig c, String key) {
+		BattleMusicConfig.SongSetting s = (c.songSettings == null) ? null : c.songSettings.get(key);
+		return s != null ? s.startSeconds : 0.0;
+	}
+	private static double savedWeight(BattleMusicConfig c, String key) {
+		BattleMusicConfig.SongSetting s = (c.songSettings == null) ? null : c.songSettings.get(key);
+		return s != null ? s.weight : 50.0;
 	}
 }

@@ -47,6 +47,8 @@ public class MusicChannel {
 	private float fadeRate = 0f;               // gain units per second
 	private boolean stopWhenSilent = false;
 	private volatile float outputVolume = 1f;
+	// Per-track gain (folder volume * per-song volume from config; 1 = unchanged).
+	private volatile float trackGain = 1f;
 
 	private volatile Path loaded;
 	private volatile Thread playThread;
@@ -67,7 +69,7 @@ public class MusicChannel {
 
     // Load + start from the beginning. Resets gain to 0.
 	public boolean start(Path oggPath, boolean loop) {
-		return start(oggPath, loop, 0L);
+		return start(oggPath, loop, 0L, 0.0);
 	}
 
 	/**
@@ -76,6 +78,15 @@ public class MusicChannel {
 	 * it in. Used by "battle resume" to continue a track where it left off.
 	 */
 	public boolean start(Path oggPath, boolean loop, long startFrame) {
+		return start(oggPath, loop, startFrame, 0.0);
+	}
+
+	/**
+	 * Same as above but, on a fresh (non-resume) start, begins playback
+	 * {@code startSeconds} into the track (the per-song "start at" setting).
+	 * Ignored when {@code startFrame > 0} so a battle resume always wins.
+	 */
+	public boolean start(Path oggPath, boolean loop, long startFrame, double startSeconds) {
 
 		if (!engine.isReady() || oggPath == null) return false;
 		if (!Files.isReadable(oggPath)) {
@@ -93,7 +104,8 @@ public class MusicChannel {
 		loaded = oggPath;
 		final Path path = oggPath;
 		final long seekTo = Math.max(0L, startFrame);
-		Thread t = new Thread(() -> streamLoop(path, loop, seekTo, myFlag), "battlemusic-" + name);
+		final double seekSeconds = Math.max(0.0, startSeconds);
+		Thread t = new Thread(() -> streamLoop(path, loop, seekTo, seekSeconds, myFlag), "battlemusic-" + name);
 		t.setDaemon(true);
 		playThread = t;
 		t.start();
@@ -121,6 +133,12 @@ public class MusicChannel {
 
 	public void setOutputVolume(float volume) {
 		this.outputVolume = Math.max(0f, Math.min(1f, volume));
+	}
+
+	// Per-track gain (folder volume * per-song volume). May exceed 1 to boost a
+	// quiet track; the per-sample write below clamps to the 16-bit range.
+	public void setTrackGain(float gain) {
+		this.trackGain = Math.max(0f, gain);
 	}
 
 	// Advance the fade. Call once per tick with real dt. Cheap, no audio.
@@ -190,7 +208,7 @@ public class MusicChannel {
 		}
 	}
 
-	private void streamLoop(Path path, boolean loop, long startFrame, AtomicBoolean alive) {
+	private void streamLoop(Path path, boolean loop, long startFrame, double startSeconds, AtomicBoolean alive) {
 		long decoder = NULL;
 		SourceDataLine line = null;
 		ShortBuffer pcm = null;
@@ -216,16 +234,22 @@ public class MusicChannel {
 				return;
 			}
 
-            // Resume playback partway through the track. If the seek fails (e.g.
-            // the file changed length), fall back to the start
-			if (startFrame > 0L) {
-				if (!stb_vorbis_seek(decoder, (int) startFrame)) {
-					BattleMusicClient.debug("[{}] seek to frame {} failed; starting from 0", name, startFrame);
+            // Battle resume uses a frame offset; the per-song "start at" uses
+            // seconds, converted to frames now that we know the sample rate. A
+            // resume frame always wins over start-at seconds. If the seek fails
+            // (e.g. the file changed length), fall back to the start.
+			long seekFrame = startFrame;
+			if (seekFrame <= 0L && startSeconds > 0.0) {
+				seekFrame = (long) (startSeconds * sampleRate);
+			}
+			if (seekFrame > 0L) {
+				if (!stb_vorbis_seek(decoder, (int) seekFrame)) {
+					BattleMusicClient.debug("[{}] seek to frame {} failed; starting from 0", name, seekFrame);
 					stb_vorbis_seek_start(decoder);
 					playbackFrame = 0L;
 				} else {
-					playbackFrame = startFrame;
-					BattleMusicClient.debug("[{}] resumed at frame {}", name, startFrame);
+					playbackFrame = seekFrame;
+					BattleMusicClient.debug("[{}] starting at frame {}", name, seekFrame);
 				}
 			}
 
@@ -256,7 +280,8 @@ public class MusicChannel {
 
 				playbackFrame = stb_vorbis_get_sample_offset(decoder);
 				int sampleCount = n * channels;
-				float gain = clamp01(currentGain * outputVolume);
+				float gain = currentGain * outputVolume * trackGain;
+				if (gain < 0f) gain = 0f;
 
 				for (int i = 0; i < sampleCount; i++) {
 					int v = (int) (pcm.get(i) * gain);
