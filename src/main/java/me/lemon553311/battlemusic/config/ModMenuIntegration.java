@@ -252,12 +252,14 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setSaveConsumer(v -> c.resumeAggroMobCount = v)
 				.build());
 
-		// Hidden feature (password-gated)
-		// Stays disguised as a plain "Advanced" tab until the code is entered.
-		// Only after unlocking does the real name and description appear.
-		ConfigCategory secret = builder.getOrCreateCategory(
-				Component.literal(c.lastTotemEnabled ? "Last Totem Standing" : "Advanced"));
-		if (!c.lastTotemEnabled) {
+		// Password-gated "Fun" tab. The tab is ALWAYS just called "Fun" in both
+		// states, so it gives nothing away. Entering the code only UNLOCKS the tab
+		// (funUnlocked); it never turns any feature on, so everything inside stays
+		// off until the player flips it. (lastTotemEnabled is still honored as
+		// "unlocked" so configs unlocked before this split don't get re-locked.)
+		boolean funUnlocked = c.funUnlocked || c.lastTotemEnabled;
+		ConfigCategory secret = builder.getOrCreateCategory(Component.literal("Fun"));
+		if (!funUnlocked) {
 			// Locked: give away nothing about what this is or what it does.
 			secret.addEntry(eb.startTextDescription(
 					Component.literal("Got a code? Enter it below and click Save.")
@@ -268,20 +270,38 @@ public class ModMenuIntegration implements ModMenuApi {
 					.setTooltip(Component.literal("Enter a code and click Save."))
 					.setSaveConsumer(v -> {
 						if (v != null && v.trim().equalsIgnoreCase(LastTotemFeature.PASSWORD)) {
-							c.lastTotemEnabled = true;
+							// Only unlock the tab. Do NOT enable any feature by default.
+							c.funUnlocked = true;
 						}
 					})
 					.build());
 		} else {
-			// Unlocked: now it is safe to reveal the name and a normal on/off toggle.
+			// Unlocked: reveal the features. Each stays OFF until toggled on.
 			secret.addEntry(eb.startTextDescription(
-					Component.literal("Plays a sound and flashes an image when you drop to your last totem.")
+					Component.literal("Secret extras. Everything here is off by default \u2014 flip on what you want.")
 							.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
 					.build());
-			secret.addEntry(eb.startBooleanToggle(Component.literal("Enabled"), c.lastTotemEnabled)
+
+			// Last Totem Standing: sound + image flash on your last totem.
+			secret.addEntry(eb.startTextDescription(
+					Component.literal("Last Totem Standing \u2014 plays a sound and flashes an image when you drop to your last totem.")
+							.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
+					.build());
+			secret.addEntry(eb.startBooleanToggle(Component.literal("Last Totem Standing"), c.lastTotemEnabled)
 					.setDefaultValue(false)
 					.setTooltip(Component.literal("Turn the Last Totem Standing alert on or off."))
 					.setSaveConsumer(v -> c.lastTotemEnabled = v)
+					.build());
+
+			// Last Heart Standing: image flash when low HP forces a heavy battle.
+			secret.addEntry(eb.startTextDescription(
+					Component.literal("Last Heart Standing \u2014 flashes an image when a heavy battle starts because your health dropped to the heavy HP threshold (not from PvP, bosses, or swarms).")
+							.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
+					.build());
+			secret.addEntry(eb.startBooleanToggle(Component.literal("Last Heart Standing"), c.lastHeartEnabled)
+					.setDefaultValue(false)
+					.setTooltip(Component.literal("Flash an image when low health forces a heavy battle. PvP-triggered heavy never shows it."))
+					.setSaveConsumer(v -> c.lastHeartEnabled = v)
 					.build());
 		}
 

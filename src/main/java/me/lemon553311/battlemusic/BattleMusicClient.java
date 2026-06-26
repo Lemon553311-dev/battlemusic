@@ -4,6 +4,7 @@ import me.lemon553311.battlemusic.audio.AudioEngine;
 import me.lemon553311.battlemusic.audio.MusicLibrary;
 import me.lemon553311.battlemusic.config.BattleMusicConfig;
 import me.lemon553311.battlemusic.lasttotem.LastTotemFeature;
+import me.lemon553311.battlemusic.lastheart.LastHeartFeature;
 import me.lemon553311.battlemusic.state.BattleStateMachine;
 
 import net.fabricmc.api.ClientModInitializer;
@@ -37,6 +38,7 @@ public class BattleMusicClient implements ClientModInitializer {
 	private static MusicLibrary library;
 	private static BattleStateMachine stateMachine;
 	private static LastTotemFeature lastTotem;
+	private static LastHeartFeature lastHeart;
 
 	@Override
 	public void onInitializeClient() {
@@ -53,6 +55,10 @@ public class BattleMusicClient implements ClientModInitializer {
 		// Secret, password-gated "Last Totem Standing" alert (off unless unlocked).
 		lastTotem = new LastTotemFeature(config);
 		lastTotem.init();
+
+		// Secret, password-gated "Last Heart Standing" visual (off unless unlocked + enabled).
+		lastHeart = new LastHeartFeature(config);
+		lastHeart.init();
 
 		ClientLifecycleEvents.CLIENT_STARTED.register(client -> audioEngine.init());
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
@@ -121,5 +127,9 @@ public class BattleMusicClient implements ClientModInitializer {
 
 	public static BattleStateMachine stateMachine() {
 		return stateMachine;
+	}
+
+	public static LastHeartFeature lastHeart() {
+		return lastHeart;
 	}
 }

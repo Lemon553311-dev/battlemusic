@@ -16,6 +16,7 @@ import java.nio.ShortBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.lwjgl.stb.STBVorbis.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
@@ -33,38 +34,54 @@ public final class OneShotSound {
 	private OneShotSound() {}
 
 	private static final int SAMPLES_PER_CHUNK = 4096; // per channel
+	// Default alert used by the no-resource play(gain) overload (Last Totem Standing).
 	private static final String RESOURCE = "/assets/battlemusic/lts/LRS_StartSound.ogg";
 
-	// On-disk copy of the bundled ogg (STB needs a filesystem path, not a stream).
-	private static volatile Path extracted;
+	// On-disk copies of bundled oggs, keyed by classpath resource path (STB needs a
+	// filesystem path, not a stream). Each distinct sound is extracted to temp once.
+	private static final ConcurrentHashMap<String, Path> EXTRACTED = new ConcurrentHashMap<>();
 
-	/** Play the alert once at the given gain (0..1), on its own daemon thread. */
+	/** Play the default Last Totem Standing alert once at the given gain (0..1). */
 	public static void play(float gain) {
+		play(RESOURCE, gain);
+	}
+
+	/**
+	 * Play a bundled one-shot ogg (by classpath resource path) once at the given
+	 * gain (0..1), on its own daemon thread. Lets each secret "Fun" alert ship its
+	 * own sound without touching Minecraft's OpenAL sound engine.
+	 */
+	public static void play(String resource, float gain) {
 		final float g = Math.max(0f, Math.min(1f, gain));
 		Thread t = new Thread(() -> {
 			try {
-				Path ogg = ensureExtracted();
+				Path ogg = ensureExtracted(resource);
 				if (ogg != null) stream(ogg, g);
 			} catch (Throwable th) {
-				BattleMusicClient.LOGGER.warn("[lts] one-shot sound failed", th);
+				BattleMusicClient.LOGGER.warn("[lts] one-shot sound failed for {}", resource, th);
 			}
-		}, "battlemusic-lts-oneshot");
+		}, "battlemusic-oneshot");
 		t.setDaemon(true);
 		t.start();
 	}
 
-	private static synchronized Path ensureExtracted() throws Exception {
-		if (extracted != null && Files.isReadable(extracted)) return extracted;
-		try (InputStream in = OneShotSound.class.getResourceAsStream(RESOURCE)) {
-			if (in == null) {
-				BattleMusicClient.LOGGER.warn("[lts] bundled sound not found on classpath at {}", RESOURCE);
-				return null;
+	private static Path ensureExtracted(String resource) throws Exception {
+		Path cached = EXTRACTED.get(resource);
+		if (cached != null && Files.isReadable(cached)) return cached;
+		synchronized (OneShotSound.class) {
+			cached = EXTRACTED.get(resource);
+			if (cached != null && Files.isReadable(cached)) return cached;
+			try (InputStream in = OneShotSound.class.getResourceAsStream(resource)) {
+				if (in == null) {
+					BattleMusicClient.LOGGER.warn("[lts] bundled sound not found on classpath at {}", resource);
+					return null;
+				}
+				Path tmp = Files.createTempFile("battlemusic-oneshot-", ".ogg");
+				Files.copy(in, tmp, StandardCopyOption.REPLACE_EXISTING);
+				tmp.toFile().deleteOnExit();
+				EXTRACTED.put(resource, tmp);
+				return tmp;
 			}
-			Path tmp = Files.createTempFile("battlemusic-lts-", ".ogg");
-			Files.copy(in, tmp, StandardCopyOption.REPLACE_EXISTING);
-			tmp.toFile().deleteOnExit();
-			extracted = tmp;
-			return tmp;
 		}
 	}
 

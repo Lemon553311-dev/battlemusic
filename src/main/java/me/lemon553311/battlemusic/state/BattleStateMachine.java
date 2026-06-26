@@ -1,6 +1,7 @@
 package me.lemon553311.battlemusic.state;
 
 import me.lemon553311.battlemusic.BattleMusicClient;
+import me.lemon553311.battlemusic.lastheart.LastHeartFeature;
 import me.lemon553311.battlemusic.audio.AudioEngine;
 import me.lemon553311.battlemusic.audio.MusicChannel;
 import me.lemon553311.battlemusic.audio.MusicLibrary;
@@ -251,6 +252,9 @@ public class BattleStateMachine {
 			}
 		} else if (lowHp) {
 			engageHeavy(true);
+			// "Last Heart Standing" visual: only when low HP alone makes it heavy.
+			// playerCombatHot guards the pool==HEAVY case so PvP never shows it.
+			if (!playerCombatHot) notifyHeavyFromLowHp();
 		} else if (playerCombatHot) {
 			engageHeavy(true);
 		} else {
@@ -274,7 +278,18 @@ public class BattleStateMachine {
 					boss, lowHp, player.getHealth(), config.heavyHealthThreshold,
 					pvpPoolBattle, playerCombatHot, config.playerCombatMusicPool);
 			engageHeavy(false);
+			// "Last Heart Standing" visual: only when the low-HP threshold is the
+			// sole reason (no boss, swarm, or PvP involved), as requested.
+			if (lowHpForcesHeavy && !boss && !manyMobs && !playerCombatHot) {
+				notifyHeavyFromLowHp();
+			}
 		}
+	}
+
+	/** Fire the password-gated "Last Heart Standing" image (no-op unless enabled). */
+	private void notifyHeavyFromLowHp() {
+		LastHeartFeature f = BattleMusicClient.lastHeart();
+		if (f != null) f.onHeavyFromLowHp();
 	}
 
 	private void engageRegular(boolean allowResume) {

@@ -119,11 +119,18 @@ public class BattleMusicConfig {
 	/** Verbose debug logging to the game log/console (INFO level, prefixed with [DBG]) */
 	public boolean debug = false;
 
-	// ---- Last Totem Standing (secret) ------------------------------------
-	/** Secret, password-gated "Last Totem Standing" alert. Disabled by default;
-	 * unlocked by typing the password in the mod menu. Persisted so it stays
-	 * unlocked across restarts. */
+	// ---- Secret "Fun" tab (password-gated) -------------------------------
+	/** Unlocks the password-gated "Fun" tab. Entering the code only flips this;
+	 * it never enables any individual feature - those stay off until the player
+	 * turns them on. Persisted so the tab stays unlocked across restarts. */
+	public boolean funUnlocked = false;
+	/** Secret "Last Totem Standing" alert (sound + image flash on your last
+	 * totem). Off by default even after the tab is unlocked. */
 	public boolean lastTotemEnabled = false;
+	/** Secret "Last Heart Standing" visual: flashes an image when a HEAVY battle
+	 * starts specifically from the low-HP threshold (not PvP, bosses, or swarms).
+	 * Off by default even after the tab is unlocked. */
+	public boolean lastHeartEnabled = false;
 
 	// ---- Per-folder / per-song music controls ----------------------------
 	/** Volume multiplier for the whole Regular Battle folder (1.0 = 100% = unchanged). */
