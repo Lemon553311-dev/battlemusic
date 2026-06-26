@@ -1,0 +1,14 @@
+{
+  "name": "wahoo container",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "25",
+      "installGradle": false
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["vscjava.vscode-java-pack", "redhat.java"]
+    }
+  }
+}
