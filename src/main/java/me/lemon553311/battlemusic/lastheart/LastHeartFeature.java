@@ -37,9 +37,8 @@ public final class LastHeartFeature {
 	private static final int IMG_W = 1023;
 	private static final int IMG_H = 667;
 
-	// Bundled at assets/battlemusic/lastheart/LHS_StartSound.ogg - its own swappable
-	// file (ships as a copy of the totem alert until a distinct clip is dropped in).
-	private static final String SOUND = "/assets/battlemusic/lastheart/LHS_StartSound.ogg";
+	// use the same sound as the totem alert
+	private static final String SOUND = "/assets/battlemusic/lts/LRS_StartSound.ogg";
 
 	// Opacity animation: 0.20 -> 0.70 over PHASE1, then 0.70 -> 0.00 over PHASE2.
 	private static final double PHASE1_SECONDS = 3.0;
