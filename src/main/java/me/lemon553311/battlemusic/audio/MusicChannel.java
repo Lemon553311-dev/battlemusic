@@ -312,8 +312,4 @@ public class MusicChannel {
 			}
 		}
 	}
-
-	private static float clamp01(float g) {
-		return g < 0f ? 0f : (g > 1f ? 1f : g);
-	}
 }
