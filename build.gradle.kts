@@ -66,6 +66,7 @@ tasks {
 			"name" to project.property("mod.name"),
 			"version" to modVersion,
 			"minecraft" to project.property("mod.mc_compat"),
+			"loader" to project.property("mod.loader_compat"),
 		)
 		props.forEach { (key, value) -> inputs.property(key, value) }
 		filesMatching("fabric.mod.json") { expand(props) }
