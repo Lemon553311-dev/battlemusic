@@ -3,7 +3,7 @@
 # sections (these are read in build.gradle.kts via sc.properties[...]).
 # See https://stonecutter.kikugie.dev/wiki/config/properties
 
-mod.id = "battlemusic"
+mod.id = "battle-music"
 mod.name = "Battle Music"
 mod.group = "me.lemon553311.battlemusic"
 mod.version = "1.2.0"
