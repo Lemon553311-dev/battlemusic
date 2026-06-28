@@ -3,12 +3,12 @@
 # sections (these are read in build.gradle.kts via sc.properties[...]).
 # See https://stonecutter.kikugie.dev/wiki/config/properties
 
-mod.id = "battle-music"
+mod.id = "battlemusic"
 mod.name = "Battle Music"
 mod.group = "me.lemon553311.battlemusic"
 mod.version = "1.2.0"
 # Modrinth project to publish to (the slug from your project URL, or its ID).
-mod.modrinth_id = "battlemusic"
+mod.modrinth_id = "battle-music"
 
 deps.fabric_loader = "0.19.3"
 loomx.loom_version = "1.17-SNAPSHOT"
