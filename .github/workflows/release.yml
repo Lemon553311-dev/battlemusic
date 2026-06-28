@@ -16,36 +16,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 25
+      # The Stonecutter nodes target Java 17 / 21 / 25, so install all three.
+      - name: Set up JDKs
         uses: actions/setup-java@v4
         with:
-          java-version: '25'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: |
+            17
+            21
+            25
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
-      - name: Build
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            gradle build --no-daemon -Pversion_override="${GITHUB_REF_NAME#v}"
-          else
-            gradle build --no-daemon
-          fi
+      # chiseledBuildAndCollect builds every version in settings.gradle.kts at
+      # once and copies the jars into build/libs/<mod version>/. The mod version
+      # comes from mod.version in stonecutter.properties.toml.
+      - name: Build all versions
+        run: ./gradlew chiseledBuildAndCollect --no-daemon --stacktrace
 
-      - name: Collect jar
+      - name: Collect jars
         run: |
           mkdir -p release
-          cp build/libs/*.jar release/
+          find build/libs -name '*.jar' -exec cp {} release/ \;
           rm -f release/*-sources.jar release/*-dev.jar release/*-dev-shadow.jar
-
+          ls -la release
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: battlemusic-jar
+          name: battlemusic-jars
           path: release/*.jar
-
+          if-no-files-found: error
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')

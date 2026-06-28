@@ -4,13 +4,24 @@ import me.lemon553311.battlemusic.BattleMusicClient;
 import me.lemon553311.battlemusic.config.BattleMusicConfig;
 import me.lemon553311.battlemusic.lasttotem.OneShotSound;
 
+//? if >=1.21.6 {
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+//?} else {
+/*import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+*///?}
 
 import net.minecraft.client.Minecraft;
+//? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
+//?} else {
+/*import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.resources.ResourceLocation;
+*///?}
+//? if >=1.21.5 {
+import net.minecraft.client.renderer.RenderPipelines;
+//?}
 import net.minecraft.sounds.SoundSource;
 
 /**
@@ -22,17 +33,22 @@ import net.minecraft.sounds.SoundSource;
  * threshold (the low-HP escalation). By design it does NOT fire for PvP-driven
  * heavy, bosses, or big swarms - only the low-HP trigger, as requested.
  *
- * Unlike Last Totem Standing this has no per-tick logic: it is fired on demand by
- * the battle state machine through {@link #onHeavyFromLowHp()}, where it both
- * plays a bundled alert sound and flashes the image. The overlay rendering mirrors
- * the totem feature (26.1+ HUD element + scaling/tinted blit) so it behaves
- * identically on screen.
+ * Multi-version notes (Stonecutter //? directives below):
+ *   - HUD registration: HudElementRegistry on 1.21.6+, HudRenderCallback before.
+ *   - Class names: Identifier/GuiGraphicsExtractor on 26.1+, ResourceLocation/
+ *     GuiGraphics before (official Mojang mappings renamed these at the non-obf
+ *     switch).
+ *   - Draw call: RenderPipelines blit overload on 1.21.5+, the legacy scaled
+ *     GuiGraphics blit + RenderSystem tint before.
  */
 public final class LastHeartFeature {
 
 	// Bundled at assets/battlemusic/textures/gui/last_heart_standing.png
-	private static final Identifier IMAGE =
-			Identifier.fromNamespaceAndPath(BattleMusicClient.MOD_ID, "textures/gui/last_heart_standing.png");
+	//? if >=26.1 {
+	private static final Identifier IMAGE = mkId("textures/gui/last_heart_standing.png");
+	//?} else {
+	/*private static final ResourceLocation IMAGE = mkId("textures/gui/last_heart_standing.png");
+	*///?}
 	// Native pixel size of that PNG, used for aspect-correct scaling.
 	private static final int IMG_W = 1023;
 	private static final int IMG_H = 667;
@@ -61,12 +77,16 @@ public final class LastHeartFeature {
 	}
 
 	public void init() {
-		// HudRenderCallback no longer exists in 26.1+. Register a HUD element that
-		// draws right before the chat layer, exactly like the totem overlay.
+		//? if >=1.21.6 {
+		// HudRenderCallback no longer exists in 1.21.6+. Register a HUD element
+		// that draws right before the chat layer, exactly like the totem overlay.
 		HudElementRegistry.attachElementBefore(
 				VanillaHudElements.CHAT,
-				Identifier.fromNamespaceAndPath(BattleMusicClient.MOD_ID, "last_heart_standing"),
+				mkId("last_heart_standing"),
 				(graphics, delta) -> onHudRender(graphics));
+		//?} else {
+		/*HudRenderCallback.EVENT.register((graphics, tickDelta) -> onHudRender(graphics));
+		*///?}
 	}
 
 	/**
@@ -90,7 +110,11 @@ public final class LastHeartFeature {
 		}
 	}
 
+	//? if >=26.1 {
 	private void onHudRender(GuiGraphicsExtractor graphics) {
+	//?} else {
+	/*private void onHudRender(GuiGraphics graphics) {
+	*///?}
 		if (!animActive) return;
 		// If the feature was switched off mid-animation, stop drawing immediately.
 		if (config == null || !config.lastHeartEnabled) {
@@ -127,8 +151,9 @@ public final class LastHeartFeature {
 		int a = Math.max(0, Math.min(255, Math.round(alpha * 255f)));
 		int color = (a << 24) | 0x00FFFFFF; // white tint, animated alpha (ARGB)
 
-		// 26.1+ blit: (pipeline, texture, x, y, u, v, drawW, drawH,
-		//              regionW, regionH, texW, texH, argbColor).
+		//? if >=1.21.5 {
+		// 1.21.5+ blit: (pipeline, texture, x, y, u, v, drawW, drawH,
+		//                regionW, regionH, texW, texH, argbColor).
 		graphics.blit(
 				RenderPipelines.GUI_TEXTURED,
 				IMAGE,
@@ -138,7 +163,38 @@ public final class LastHeartFeature {
 				IMG_W, IMG_H,
 				IMG_W, IMG_H,
 				color);
+		//?} else {
+		/*// Legacy (<1.21.5) scaled blit: tint via RenderSystem shader color.
+		// VERIFY on build - the GuiGraphics.blit overload shape shifted a few
+		// times across 1.20.1 / 1.21.0-1.21.4; see PORTING.md for the exact
+		// signatures per version if this does not resolve.
+		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
+		graphics.blit(
+				IMAGE,
+				drawX, drawY,
+				drawW, drawH,
+				0f, 0f,
+				IMG_W, IMG_H,
+				IMG_W, IMG_H);
+		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+		*///?}
 	}
+
+	//? if >=26.1 {
+	private static Identifier mkId(String path) {
+		return Identifier.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
+	}
+	//?} elif >=1.21 {
+	/*private static ResourceLocation mkId(String path) {
+		return ResourceLocation.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
+	}
+	*///?} else {
+	/*private static ResourceLocation mkId(String path) {
+		return new ResourceLocation(BattleMusicClient.MOD_ID, path);
+	}
+	*///?}
 
 	private float alphaFor(double elapsed) {
 		if (elapsed < 0) return 0f;

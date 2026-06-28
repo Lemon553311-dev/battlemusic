@@ -4,14 +4,28 @@ import me.lemon553311.battlemusic.BattleMusicClient;
 import me.lemon553311.battlemusic.config.BattleMusicConfig;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+//? if >=1.21.6 {
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+//?} else {
+/*import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+*///?}
 
 import net.minecraft.client.Minecraft;
+//? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+//?} else {
+/*import net.minecraft.client.gui.GuiGraphics;
+*///?}
 import net.minecraft.client.player.LocalPlayer;
+//? if >=1.21.5 {
 import net.minecraft.client.renderer.RenderPipelines;
+//?}
+//? if >=26.1 {
 import net.minecraft.resources.Identifier;
+//?} else {
+/*import net.minecraft.resources.ResourceLocation;
+*///?}
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -22,21 +36,16 @@ import net.minecraft.world.item.Items;
  *
  * When the feature is unlocked (see the mod menu) it watches the player's totem
  * count every client tick. The moment that count falls to exactly ONE remaining
- * (e.g. you were holding two - one in the offhand, one in the inventory - and
- * one of them just popped) it:
- *   - plays the bundled alert sound, and
- *   - flashes an image in the centre of the screen (inset 30% from every side),
- *     fading the opacity 20% -> 70% over 3s, then 70% -> 0% over 1s, then gone.
+ * it plays a bundled alert sound and flashes an image in the centre of the
+ * screen, fading 20% -> 70% over 3s, then 70% -> 0% over 1s.
  *
- * Totems are counted across the whole Inventory container, which in vanilla
- * holds the hotbar, main inventory, armor slots AND the offhand slot, so an
- * offhand totem is included in the total.
- *
- * Written for Minecraft 26.1-26.2 mappings + Fabric API: the HUD overlay is
- * registered through {@link HudElementRegistry} (HudRenderCallback was removed),
- * drawing happens through {@link GuiGraphicsExtractor}, the texture id is an
- * {@link Identifier}, and the image is drawn with the scaling/tinted
- * {@code blit} overload using {@link RenderPipelines#GUI_TEXTURED}.
+ * Multi-version notes (Stonecutter //? directives below):
+ *   - HUD registration: HudElementRegistry on 1.21.6+, HudRenderCallback before.
+ *   - Class names: Identifier/GuiGraphicsExtractor on 26.1+, ResourceLocation/
+ *     GuiGraphics before.
+ *   - Draw call: RenderPipelines blit overload on 1.21.5+, the legacy scaled
+ *     GuiGraphics blit + RenderSystem tint before.
+ * Everything else (totem counting, tick logic, audio) is version-agnostic.
  */
 public final class LastTotemFeature {
 
@@ -45,14 +54,16 @@ public final class LastTotemFeature {
 	public static final String PASSWORD = "lmao";
 
 	// Bundled at assets/battlemusic/textures/gui/last_totem_standing.png
-	private static final Identifier IMAGE =
-			Identifier.fromNamespaceAndPath(BattleMusicClient.MOD_ID, "textures/gui/last_totem_standing.png");
+	//? if >=26.1 {
+	private static final Identifier IMAGE = mkId("textures/gui/last_totem_standing.png");
+	//?} else {
+	/*private static final ResourceLocation IMAGE = mkId("textures/gui/last_totem_standing.png");
+	*///?}
 	// Native pixel size of that PNG, used for aspect-correct scaling.
 	private static final int IMG_W = 1023;
 	private static final int IMG_H = 667;
 
-	// Opacity animation (see class doc). "Transparency" in the request is read as
-	// opacity here: 0.20 -> 0.70 over PHASE1, then 0.70 -> 0.00 over PHASE2.
+	// Opacity animation: 0.20 -> 0.70 over PHASE1, then 0.70 -> 0.00 over PHASE2.
 	private static final double PHASE1_SECONDS = 3.0;
 	private static final double PHASE2_SECONDS = 1.0;
 	private static final float ALPHA_START = 0.20f;
@@ -77,13 +88,16 @@ public final class LastTotemFeature {
 
 	public void init() {
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
-		// HudRenderCallback no longer exists in 26.1+. Register a HUD element
-		// instead; it draws right before the chat layer (the API handles z-spacing).
-		// The element lambda receives a GuiGraphicsExtractor + DeltaTracker.
+		//? if >=1.21.6 {
+		// HudRenderCallback no longer exists in 1.21.6+. Register a HUD element
+		// instead; it draws right before the chat layer.
 		HudElementRegistry.attachElementBefore(
 				VanillaHudElements.CHAT,
-				Identifier.fromNamespaceAndPath(BattleMusicClient.MOD_ID, "last_totem_standing"),
+				mkId("last_totem_standing"),
 				(graphics, delta) -> onHudRender(graphics));
+		//?} else {
+		/*HudRenderCallback.EVENT.register((graphics, tickDelta) -> onHudRender(graphics));
+		*///?}
 	}
 
 	private void onClientTick(Minecraft client) {
@@ -99,8 +113,7 @@ public final class LastTotemFeature {
 
 		int count = countTotems(player);
 		if (lastTotemCount < 0) {
-			// First sample after enabling / joining a world: set the baseline only,
-			// so we never fire just for logging in already holding totems.
+			// First sample after enabling / joining a world: set the baseline only.
 			lastTotemCount = count;
 			return;
 		}
@@ -115,19 +128,15 @@ public final class LastTotemFeature {
 	private int countTotems(LocalPlayer player) {
 		Inventory inv = player.getInventory();
 		int total = 0;
-		// The Inventory container spans hotbar + main + armor + offhand in vanilla,
-		// so iterating it counts the offhand totem too.
+		// The Inventory container spans hotbar + main + armor + offhand in vanilla.
 		int size = inv.getContainerSize();
 		for (int i = 0; i < size; i++) {
 			if (isTotem(inv.getItem(i))) {
 				total += inv.getItem(i).getCount();
 			}
 		}
-		// A totem held on the mouse cursor (picked up inside any container screen)
-		// has left its inventory slot but is still in the player's possession. It
-		// lives on the open menu, not the Inventory container, so count it here too.
-		// Without this, moving the 2nd-to-last totem makes the count dip to 1 and
-		// false-triggers the alert. When no screen is open the carried stack is empty.
+		// A totem held on the mouse cursor lives on the open menu, not the Inventory
+		// container, so count it here too to avoid a false dip to 1.
 		if (player.containerMenu != null) {
 			ItemStack carried = player.containerMenu.getCarried();
 			if (isTotem(carried)) {
@@ -153,7 +162,11 @@ public final class LastTotemFeature {
 		}
 	}
 
+	//? if >=26.1 {
 	private void onHudRender(GuiGraphicsExtractor graphics) {
+	//?} else {
+	/*private void onHudRender(GuiGraphics graphics) {
+	*///?}
 		if (!animActive) return;
 
 		double elapsed = (System.nanoTime() - animStartNanos) / 1_000_000_000.0;
@@ -185,10 +198,9 @@ public final class LastTotemFeature {
 		int a = Math.max(0, Math.min(255, Math.round(alpha * 255f)));
 		int color = (a << 24) | 0x00FFFFFF; // white tint, animated alpha (ARGB)
 
-		// 26.1+ blit: (pipeline, texture, x, y, u, v, drawW, drawH,
-		//              regionW, regionH, texW, texH, argbColor).
-		// Drawing the whole image (region = full texture) scaled into drawW x drawH,
-		// tinted white with the animated alpha so it fades in and out.
+		//? if >=1.21.5 {
+		// 1.21.5+ blit: (pipeline, texture, x, y, u, v, drawW, drawH,
+		//                regionW, regionH, texW, texH, argbColor).
 		graphics.blit(
 				RenderPipelines.GUI_TEXTURED,
 				IMAGE,
@@ -198,7 +210,37 @@ public final class LastTotemFeature {
 				IMG_W, IMG_H,
 				IMG_W, IMG_H,
 				color);
+		//?} else {
+		/*// Legacy (<1.21.5) scaled blit: tint via RenderSystem shader color.
+		// VERIFY on build - see PORTING.md for the exact blit signature per
+		// version if this does not resolve on 1.20.1 / 1.21.0-1.21.4.
+		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
+		graphics.blit(
+				IMAGE,
+				drawX, drawY,
+				drawW, drawH,
+				0f, 0f,
+				IMG_W, IMG_H,
+				IMG_W, IMG_H);
+		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+		*///?}
 	}
+
+	//? if >=26.1 {
+	private static Identifier mkId(String path) {
+		return Identifier.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
+	}
+	//?} elif >=1.21 {
+	/*private static ResourceLocation mkId(String path) {
+		return ResourceLocation.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
+	}
+	*///?} else {
+	/*private static ResourceLocation mkId(String path) {
+		return new ResourceLocation(BattleMusicClient.MOD_ID, path);
+	}
+	*///?}
 
 	private float alphaFor(double elapsed) {
 		if (elapsed < 0) return 0f;

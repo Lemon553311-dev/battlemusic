@@ -3,12 +3,13 @@
   "features": {
     "ghcr.io/devcontainers/features/java:1": {
       "version": "25",
-      "installGradle": false
+      "installGradle": true,
+      "gradleVersion": "9.6.0"
     }
   },
   "customizations": {
     "vscode": {
-      "extensions": ["vscjava.vscode-java-pack", "redhat.java"]
+      "extensions": ["vscjava.vscode-java-pack", "redhat.java", "vscjava.vscode-gradle"]
     }
   }
 }

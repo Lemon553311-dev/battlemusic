@@ -6,3 +6,6 @@ run/
 out/
 .vscode/
 .kilo
+.stonecutter/
+versions/*/build/
+versions/*/.gradle/

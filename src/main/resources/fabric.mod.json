@@ -1,38 +1,38 @@
 {
 	"schemaVersion": 1,
-	"id": "battlemusic",
+	"id": "${id}",
 	"version": "${version}",
-	"name": "Battle Music",
+	"name": "${name}",
 	"description": "Plays your own imported music during fights! Client-side, smooth fades, dynamic changes, very customizable.",
 	"authors": [
-                "Lemon553311"
-                ],
+		"Lemon553311"
+	],
 
 	"contact": {
-      "discords":"Lemon553311"
-    },
+		"discords": "Lemon553311"
+	},
 
 	"license": "MIT",
 	"icon": "assets/battlemusic/icon.png",
 	"environment": "client",
 	"entrypoints": {
 		"client": [
-          "me.lemon553311.battlemusic.BattleMusicClient"
+			"me.lemon553311.battlemusic.BattleMusicClient"
 		],
 		"modmenu": [
-          "me.lemon553311.battlemusic.config.ModMenuIntegration"
+			"me.lemon553311.battlemusic.config.ModMenuIntegration"
 		]
 	},
 
 	"depends": {
-		"fabricloader": ">=0.17.0",
-		"minecraft": ">=26.1 <26.3",
-		"java": ">=25",
+		"fabricloader": ">=0.16",
+		"minecraft": "${minecraft}",
+		"java": ">=17",
 		"fabric-api": "*"
 	},
 
 	"suggests": {
-		"modmenu": ">=18.0.0-beta.1",
+		"modmenu": "*",
 		"cloth-config": "*"
 	}
 }
