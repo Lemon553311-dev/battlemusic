@@ -30,10 +30,10 @@ dependencies {
 
 	// Use mod{...} even on 26.1+ - loom-back-compat converts them as needed.
 	modImplementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
-	modImplementation("net.fabricmc.fabric-api:fabric-api:${sc.properties["deps.fabric_api"]}")
+	modImplementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
 
-	modImplementation("com.terraformersmc:modmenu:${sc.properties["deps.modmenu"]}")
-	modImplementation("me.shedaniel.cloth:cloth-config-fabric:${sc.properties["deps.cloth_config"]}") {
+	modImplementation("com.terraformersmc:modmenu:${property("deps.modmenu")}")
+	modImplementation("me.shedaniel.cloth:cloth-config-fabric:${property("deps.cloth_config")}") {
 		exclude(group = "net.fabricmc.fabric-api")
 	}
 }
@@ -54,7 +54,7 @@ tasks {
 			"id" to property("mod.id"),
 			"name" to property("mod.name"),
 			"version" to property("mod.version"),
-			"minecraft" to sc.properties["mod.mc_compat"],
+			"minecraft" to property("mod.mc_compat"),
 		)
 		props.forEach { (key, value) -> inputs.property(key, value) }
 		filesMatching("fabric.mod.json") { expand(props) }
@@ -67,7 +67,7 @@ tasks {
 		group = "build"
 		description = "Builds the mod and collects jars into build/libs/<mod version>/"
 		from(loomx.modJar.flatMap { it.archiveFile }, loomx.modSourcesJar.flatMap { it.archiveFile })
-		into(rootProject.layout.buildDirectory.dir("libs/${property("mod.version")}"))
+		into(rootProject.layout.buildDirectory.dir("libs/${project.property("mod.version")}"))
 		dependsOn("build")
 	}
 }
