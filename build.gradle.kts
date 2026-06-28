@@ -5,7 +5,15 @@ plugins {
 }
 
 // Do NOT set group here - loom-back-compat / publishing manage coordinates.
-version = "${property("mod.version")}+${sc.current.version}"
+// Version source of truth:
+//   - CI release: a git tag like v1.3.0 sets MOD_VERSION=1.3.0 (see release.yml)
+//   - Local builds / tagless pushes: falls back to mod.version in
+//     stonecutter.properties.toml (currently 1.2.0)
+val modVersion: String = System.getenv("MOD_VERSION")
+	?.trim()?.removePrefix("v")?.takeIf { it.isNotEmpty() }
+	?: property("mod.version") as String
+
+version = "$modVersion+${sc.current.version}"
 base.archivesName = property("mod.id") as String
 
 // Each Minecraft version requires a specific Java level.
@@ -53,21 +61,21 @@ tasks {
 		val props = mapOf(
 			"id" to project.property("mod.id"),
 			"name" to project.property("mod.name"),
-			"version" to project.property("mod.version"),
+			"version" to modVersion,
 			"minecraft" to project.property("mod.mc_compat"),
 		)
 		props.forEach { (key, value) -> inputs.property(key, value) }
 		filesMatching("fabric.mod.json") { expand(props) }
 	}
 
-	// Builds the active version and copies the release jar(s) into
-	// build/libs/<mod version>/. Run the auto-generated chiseledBuildAndCollect
-	// to do this for every version at once.
+	// Builds the active version and copies the release jar(s) into build/libs/<mod
+	// version>/. Run buildAndCollect from the root and Gradle runs it across every
+	// version subproject at once (no "chiseled" prefix exists in Stonecutter 0.9).
 	register<Copy>("buildAndCollect") {
 		group = "build"
 		description = "Builds the mod and collects jars into build/libs/<mod version>/"
 		from(loomx.modJar.flatMap { it.archiveFile }, loomx.modSourcesJar.flatMap { it.archiveFile })
-		into(rootProject.layout.buildDirectory.dir("libs/${project.property("mod.version")}"))
+		into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
 		dependsOn("build")
 	}
 }
