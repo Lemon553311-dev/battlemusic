@@ -14,7 +14,6 @@ import me.lemon553311.battlemusic.preview.PreviewRegistry;
 
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.ChatFormatting;
 
 import java.util.ArrayList;
@@ -331,23 +330,22 @@ public class ModMenuIntegration implements ModMenuApi {
 				.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
 				.build());
 
-		// Open-folder shortcut, moved here from the General tab.
-		songs.addEntry(eb.startTextDescription(
-				Component.literal("\uD83D\uDCC1 Open the battle music folder")
-						.withStyle(s -> s
-								.withColor(ChatFormatting.AQUA)
-								.withUnderlined(true)
-								.withClickEvent(openFileClick(lib.getRootFolder()))))
-				.build());
+		// Open-folder shortcut, moved here from the General tab. A clickable entry
+		// that runs the open action directly on click (no ClickEvent), so it works
+		// from the title screen and on every version -- no player or command
+		// dispatch needed.
+		songs.addEntry(new PreviewActionEntry(
+				Component.literal("Music folder"),
+				Component.literal("\uD83D\uDCC1 Open folder"),
+				0xFF55AAFF,
+				() -> openMusicFolder(lib.getRootFolder())));
 
 		// Stop any preview that is currently playing.
-		songs.addEntry(eb.startTextDescription(
-				Component.literal("\u23F9 Stop preview")
-						.withStyle(s -> s
-								.withColor(ChatFormatting.RED)
-								.withUnderlined(true)
-								.withClickEvent(runCommandClick("/battlemusic stoppreview"))))
-				.build());
+		songs.addEntry(new PreviewActionEntry(
+				Component.literal("Preview"),
+				Component.literal("\u23F9 Stop preview"),
+				0xFF55AAFF,
+				PreviewRegistry::stop));
 
 		// Per-folder volume.
 		songs.addEntry(eb.startIntSlider(Component.literal("Regular Battle folder volume"),
@@ -372,22 +370,28 @@ public class ModMenuIntegration implements ModMenuApi {
 		PreviewRegistry.setEntries(previewOrder);
 	}
 
-	// ClickEvent became a sealed interface with record subtypes in 1.21.5.
-	// These helpers keep the call sites identical across every version.
-	private static ClickEvent openFileClick(Path folder) {
-		//? if >=1.21.5 {
-		return new ClickEvent.OpenFile(folder);
-		//?} else {
-		/*return new ClickEvent(ClickEvent.Action.OPEN_FILE, folder.toString());
-		*///?}
-	}
-
-	private static ClickEvent runCommandClick(String command) {
-		//? if >=1.21.5 {
-		return new ClickEvent.RunCommand(command);
-		//?} else {
-		/*return new ClickEvent(ClickEvent.Action.RUN_COMMAND, command);
-		*///?}
+	// Opens the battle-music folder in the OS file browser using a plain OS shell
+	// command. This deliberately avoids Minecraft's Util.getPlatform().openUri
+	// (whose class name/package moves across versions) and java.awt.Desktop (which
+	// can crash on macOS due to the AWT/GLFW main-thread conflict). 'open' on
+	// macOS is exactly what Minecraft itself shells out to. Needs no player or
+	// command dispatch, so it works from any screen on every supported version.
+	private static void openMusicFolder(Path folder) {
+		try {
+			String os = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT);
+			String path = folder.toFile().getAbsolutePath();
+			java.util.List<String> cmd;
+			if (os.contains("win")) {
+				cmd = java.util.List.of("explorer.exe", path);
+			} else if (os.contains("mac")) {
+				cmd = java.util.List.of("open", path);
+			} else {
+				cmd = java.util.List.of("xdg-open", path);
+			}
+			new ProcessBuilder(cmd).start();
+		} catch (Throwable t) {
+			BattleMusicClient.LOGGER.warn("[battlemusic] could not open music folder {}", folder, t);
+		}
 	}
 
 	private static void addFolderSongs(ConfigCategory songs, ConfigEntryBuilder eb, BattleMusicConfig c,
@@ -421,14 +425,14 @@ public class ModMenuIntegration implements ModMenuApi {
 
 			List<AbstractConfigListEntry> kids = new ArrayList<>();
 
-			// Preview button: fires the client command, which plays immediately.
-			kids.add(eb.startTextDescription(
-					Component.literal("\u25B6 Preview")
-							.withStyle(s -> s
-									.withColor(ChatFormatting.GREEN)
-									.withUnderlined(true)
-									.withClickEvent(runCommandClick("/battlemusic preview " + index))))
-					.build());
+			// Preview entry: calls the preview registry directly on click, so it
+			// works with no player (title screen) and on 1.21.5+ GUI screens. The
+			// /battlemusic preview <index> command still exists for chat use.
+			kids.add(new PreviewActionEntry(
+					Component.literal("Preview"),
+					Component.literal("\u25B6 Preview"),
+					0xFF55AAFF,
+					() -> PreviewRegistry.previewByIndex(index)));
 
 			// Per-song volume.
 			kids.add(eb.startIntSlider(Component.literal("Volume"),
