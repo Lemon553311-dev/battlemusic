@@ -2,6 +2,9 @@ plugins {
 	// Applies the correct Loom variant based on the active Minecraft version.
 	// (Do not apply fabric-loom directly - loom-back-compat does it for you.)
 	id("dev.kikugie.loom-back-compat")
+	// Publishes each version's jar to Modrinth via the `modrinth` task.
+	// Version is pinned centrally in settings.gradle.kts (pluginManagement).
+	id("com.modrinth.minotaur")
 }
 
 // Do NOT set group here - loom-back-compat / publishing manage coordinates.
@@ -78,4 +81,46 @@ tasks {
 		into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
 		dependsOn("build")
 	}
+}
+
+
+// ---------------------------------------------------------------------------
+// Modrinth publishing (Minotaur).
+// Each Stonecutter version subproject uploads its own jar, tagged with that
+// version's Minecraft releases, so `./gradlew modrinth` from the root publishes
+// all five versions at once (same whole-tree behaviour as buildAndCollect).
+//
+// Needed to actually upload (set by release.yml on a v* tag):
+//   MODRINTH_TOKEN  - a Modrinth PAT with the "Create versions" scope (GH secret)
+//   MOD_VERSION     - e.g. 1.3.0, taken from the git tag
+// The target project is mod.modrinth_id in stonecutter.properties.toml.
+// With no MODRINTH_TOKEN (normal pushes / PRs) the token stays unset and the
+// modrinth task is simply never run, so ordinary builds are unaffected.
+// ---------------------------------------------------------------------------
+modrinth {
+	System.getenv("MODRINTH_TOKEN")?.takeIf { it.isNotBlank() }?.let { token.set(it) }
+	projectId.set(property("mod.modrinth_id") as String)
+
+	versionNumber.set("$modVersion+${sc.current.version}")
+	versionName.set("Battle Music $modVersion (${sc.current.version})")
+	versionType.set("release")
+
+	// The remapped mod jar loom-back-compat produced for this version.
+	uploadFile.set(loomx.modJar.flatMap { it.archiveFile })
+
+	// Minecraft releases this jar supports (comma-separated in the toml).
+	gameVersions.set(
+		(property("mod.mc_releases") as String).split(",").map { it.trim() }
+	)
+	loaders.add("fabric")
+
+	dependencies {
+		required.project("fabric-api")
+		optional.project("cloth-config")
+		optional.project("modmenu")
+	}
+
+	// Set MODRINTH_DRY_RUN=true to validate everything WITHOUT uploading.
+	debugMode.set(System.getenv("MODRINTH_DRY_RUN") == "true")
+	changelog.set(System.getenv("CHANGELOG") ?: "See the GitHub release for changes.")
 }

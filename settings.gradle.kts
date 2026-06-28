@@ -6,6 +6,11 @@ pluginManagement {
 		maven("https://maven.kikugie.dev/releases") { name = "KikuGie Releases" }
 		maven("https://maven.kikugie.dev/snapshots") { name = "KikuGie Snapshots" }
 	}
+	plugins {
+		// Pin the Modrinth publishing plugin version centrally; build.gradle.kts
+		// applies it without a version (avoids multi-project version clashes).
+		id("com.modrinth.minotaur") version "2.+"
+	}
 }
 
 plugins {

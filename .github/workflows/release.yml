@@ -53,9 +53,20 @@ jobs:
           path: release/*.jar
           if-no-files-found: error
 
+      # On a v* tag: auto-create the GitHub Release with generated notes and the
+      # built jars attached. Created first so the release exists even if a later
+      # step errors.
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: release/*.jar
           generate_release_notes: true
+
+      # ...then publish those same jars to Modrinth.
+      - name: Publish to Modrinth
+        if: startsWith(github.ref, 'refs/tags/')
+        run: ./gradlew modrinth --no-daemon --stacktrace
+        env:
+          MOD_VERSION: ${{ github.ref_name }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}

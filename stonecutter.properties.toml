@@ -7,6 +7,8 @@ mod.id = "battlemusic"
 mod.name = "Battle Music"
 mod.group = "me.lemon553311.battlemusic"
 mod.version = "1.2.0"
+# Modrinth project to publish to (the slug from your project URL, or its ID).
+mod.modrinth_id = "battle-music"
 
 deps.fabric_loader = "0.19.3"
 loomx.loom_version = "1.17-SNAPSHOT"
@@ -14,7 +16,7 @@ loomx.loom_version = "1.17-SNAPSHOT"
 # ---- Tier 3 ----
 ["1.20.1"]
 mod.mc_compat = ">=1.20 <=1.20.1"
-mod.mc_releases = ["1.20", "1.20.1"]
+mod.mc_releases = "1.20,1.20.1"
 deps.fabric_api = "0.92.6+1.20.1"   # verify on Modrinth before release
 deps.modmenu = "7.2.2"              # verify
 deps.cloth_config = "11.1.136"      # verify
@@ -22,14 +24,14 @@ deps.cloth_config = "11.1.136"      # verify
 # ---- Tier 2 ----
 ["1.21.1"]
 mod.mc_compat = ">=1.21 <=1.21.1"
-mod.mc_releases = ["1.21", "1.21.1"]
+mod.mc_releases = "1.21,1.21.1"
 deps.fabric_api = "0.116.5+1.21.1"  # verify
 deps.modmenu = "11.0.3"             # verify
 deps.cloth_config = "15.0.140"      # verify
 
 ["1.21.8"]
 mod.mc_compat = ">=1.21.6 <=1.21.8"
-mod.mc_releases = ["1.21.6", "1.21.7", "1.21.8"]
+mod.mc_releases = "1.21.6,1.21.7,1.21.8"
 deps.fabric_api = "0.133.4+1.21.8"  # verify
 deps.modmenu = "15.0.0"             # verify
 deps.cloth_config = "19.0.147"      # verify
@@ -37,14 +39,14 @@ deps.cloth_config = "19.0.147"      # verify
 # ---- Tier 1 ----
 ["26.1.2"]
 mod.mc_compat = "~26.1"
-mod.mc_releases = ["26.1", "26.1.1", "26.1.2"]
+mod.mc_releases = "26.1,26.1.1,26.1.2"
 deps.fabric_api = "0.152.1+26.1.2"  # your known-good values
 deps.modmenu = "18.0.0-beta.1"
 deps.cloth_config = "26.1.154"
 
 ["26.2"]
 mod.mc_compat = "~26.2"
-mod.mc_releases = ["26.2"]
+mod.mc_releases = "26.2"
 deps.fabric_api = "0.152.2+26.2"    # from the current Stonecutter template
 deps.modmenu = "20.0.0-beta.3"
 deps.cloth_config = "26.2.155"      # verify on maven.shedaniel.me
