@@ -10,7 +10,6 @@ import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import me.lemon553311.battlemusic.audio.MusicLibrary;
-import me.lemon553311.battlemusic.preview.PreviewRegistry;
 
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -323,29 +322,18 @@ public class ModMenuIntegration implements ModMenuApi {
 		lib.rescan();
 
 		songs.addEntry(eb.startTextDescription(Component.literal(
-				"Per-song and per-folder controls for every track. Click \u25B6 Preview to hear a track at "
-				+ "its configured volume and start point (works while you're in a world). Volumes are %, "
+				"Per-song and per-folder controls for every track. Volumes are %, "
 				+ "100% = unchanged. Frequency sets how often a track is picked relative to the others in "
 				+ "its folder. Click Save to apply.")
 				.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
 				.build());
 
-		// Open-folder shortcut, moved here from the General tab. A clickable entry
-		// that runs the open action directly on click (no ClickEvent), so it works
-		// from the title screen and on every version -- no player or command
-		// dispatch needed.
-		songs.addEntry(new PreviewActionEntry(
-				Component.literal("Music folder"),
-				Component.literal("\uD83D\uDCC1 Open folder"),
-				0xFF55AAFF,
-				() -> openMusicFolder(lib.getRootFolder())));
-
-		// Stop any preview that is currently playing.
-		songs.addEntry(new PreviewActionEntry(
-				Component.literal("Preview"),
-				Component.literal("\u23F9 Stop preview"),
-				0xFF55AAFF,
-				PreviewRegistry::stop));
+		// Where to drop your .ogg files. Shown as plain text so there is no
+		// version-specific clickable widget to maintain.
+		songs.addEntry(eb.startTextDescription(
+				Component.literal("\uD83D\uDCC1 Music folder: " + lib.getRootFolder().toAbsolutePath())
+						.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
+				.build());
 
 		// Per-folder volume.
 		songs.addEntry(eb.startIntSlider(Component.literal("Regular Battle folder volume"),
@@ -363,39 +351,12 @@ public class ModMenuIntegration implements ModMenuApi {
 				.setSaveConsumer(v -> c.heavyFolderVolume = v / 100.0)
 				.build());
 
-		// Index list shared with the preview command (regular first, then heavy).
-		List<Path> previewOrder = new ArrayList<>();
-		addFolderSongs(songs, eb, c, lib, "Regular Battle", lib.regularTracks(), previewOrder);
-		addFolderSongs(songs, eb, c, lib, "Heavy Battle", lib.heavyTracks(), previewOrder);
-		PreviewRegistry.setEntries(previewOrder);
-	}
-
-	// Opens the battle-music folder in the OS file browser using a plain OS shell
-	// command. This deliberately avoids Minecraft's Util.getPlatform().openUri
-	// (whose class name/package moves across versions) and java.awt.Desktop (which
-	// can crash on macOS due to the AWT/GLFW main-thread conflict). 'open' on
-	// macOS is exactly what Minecraft itself shells out to. Needs no player or
-	// command dispatch, so it works from any screen on every supported version.
-	private static void openMusicFolder(Path folder) {
-		try {
-			String os = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT);
-			String path = folder.toFile().getAbsolutePath();
-			java.util.List<String> cmd;
-			if (os.contains("win")) {
-				cmd = java.util.List.of("explorer.exe", path);
-			} else if (os.contains("mac")) {
-				cmd = java.util.List.of("open", path);
-			} else {
-				cmd = java.util.List.of("xdg-open", path);
-			}
-			new ProcessBuilder(cmd).start();
-		} catch (Throwable t) {
-			BattleMusicClient.LOGGER.warn("[battlemusic] could not open music folder {}", folder, t);
-		}
+		addFolderSongs(songs, eb, c, lib, "Regular Battle", lib.regularTracks());
+		addFolderSongs(songs, eb, c, lib, "Heavy Battle", lib.heavyTracks());
 	}
 
 	private static void addFolderSongs(ConfigCategory songs, ConfigEntryBuilder eb, BattleMusicConfig c,
-			MusicLibrary lib, String folderLabel, List<Path> tracks, List<Path> previewOrder) {
+			MusicLibrary lib, String folderLabel, List<Path> tracks) {
 		songs.addEntry(eb.startTextDescription(
 				Component.literal("\u2500\u2500 " + folderLabel + " (" + tracks.size() + ") \u2500\u2500")
 						.withStyle(s -> s.withColor(ChatFormatting.GOLD)))
@@ -414,8 +375,6 @@ public class ModMenuIntegration implements ModMenuApi {
 		final double folderTotalAtOpen = folderTotal;
 
 		for (Path path : tracks) {
-			final int index = previewOrder.size();
-			previewOrder.add(path);
 
 			final String key = lib.keyFor(path);
 			final String fileName = path.getFileName().toString();
@@ -425,14 +384,6 @@ public class ModMenuIntegration implements ModMenuApi {
 
 			List<AbstractConfigListEntry> kids = new ArrayList<>();
 
-			// Preview entry: calls the preview registry directly on click, so it
-			// works with no player (title screen) and on 1.21.5+ GUI screens. The
-			// /battlemusic preview <index> command still exists for chat use.
-			kids.add(new PreviewActionEntry(
-					Component.literal("Preview"),
-					Component.literal("\u25B6 Preview"),
-					0xFF55AAFF,
-					() -> PreviewRegistry.previewByIndex(index)));
 
 			// Per-song volume.
 			kids.add(eb.startIntSlider(Component.literal("Volume"),

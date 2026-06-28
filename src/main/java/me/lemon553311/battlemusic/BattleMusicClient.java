@@ -10,15 +10,9 @@ import me.lemon553311.battlemusic.state.BattleStateMachine;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 
-import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
-import me.lemon553311.battlemusic.preview.PreviewRegistry;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,10 +61,6 @@ public class BattleMusicClient implements ClientModInitializer {
 		});
 		ClientTickEvents.END_CLIENT_TICK.register(stateMachine::onClientTick);
 
-		// Client-side command backing the mod-menu song preview buttons. Registered
-		// here (not in the ModMenu integration) so the buttons work even if ModMenu
-		// is the only optional dep, and so PreviewRegistry stays free of Cloth imports.
-		ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) -> registerPreviewCommands(dispatcher));
 
 		//music mute on l;eave
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> stateMachine.reset());
@@ -87,27 +77,6 @@ public class BattleMusicClient implements ClientModInitializer {
 				config.playerDamageWindowSeconds, config.playerCombatTimeoutSeconds);
 	}
 
-	/**
-	 * Registers the /battlemusic preview & stoppreview client commands.
-	 *
-	 * Built with Brigadier's own builders rather than Fabric's ClientCommandManager
-	 * helper, so it doesn't depend on the exact name/location of Fabric's command
-	 * source class (which varies between Fabric API versions). The type variable S
-	 * is inferred from the dispatcher the registration callback hands us, so we
-	 * never have to name FabricClientCommandSource here.
-	 */
-	private static <S> void registerPreviewCommands(CommandDispatcher<S> dispatcher) {
-		dispatcher.register(
-				LiteralArgumentBuilder.<S>literal("battlemusic")
-						.then(LiteralArgumentBuilder.<S>literal("preview")
-								.then(RequiredArgumentBuilder.<S, Integer>argument("index", IntegerArgumentType.integer(0))
-										.executes(ctx -> {
-											PreviewRegistry.previewByIndex(IntegerArgumentType.getInteger(ctx, "index"));
-											return 1;
-										})))
-						.then(LiteralArgumentBuilder.<S>literal("stoppreview")
-								.executes(ctx -> { PreviewRegistry.stop(); return 1; })));
-	}
 
 	//DEBUGG
 	public static void debug(String format, Object... args) {
