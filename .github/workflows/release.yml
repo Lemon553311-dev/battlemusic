@@ -29,11 +29,11 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # chiseledBuildAndCollect builds every version in settings.gradle.kts at
+      # buildAndCollect builds every version in settings.gradle.kts at
       # once and copies the jars into build/libs/<mod version>/. The mod version
       # comes from mod.version in stonecutter.properties.toml.
       - name: Build all versions
-        run: ./gradlew chiseledBuildAndCollect --no-daemon --stacktrace
+        run: ./gradlew buildAndCollect --no-daemon --stacktrace
 
       - name: Collect jars
         run: |
