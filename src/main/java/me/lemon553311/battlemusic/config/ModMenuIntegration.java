@@ -337,7 +337,7 @@ public class ModMenuIntegration implements ModMenuApi {
 						.withStyle(s -> s
 								.withColor(ChatFormatting.AQUA)
 								.withUnderlined(true)
-								.withClickEvent(new ClickEvent.OpenFile(lib.getRootFolder()))))
+								.withClickEvent(openFileClick(lib.getRootFolder()))))
 				.build());
 
 		// Stop any preview that is currently playing.
@@ -346,7 +346,7 @@ public class ModMenuIntegration implements ModMenuApi {
 						.withStyle(s -> s
 								.withColor(ChatFormatting.RED)
 								.withUnderlined(true)
-								.withClickEvent(new ClickEvent.RunCommand("/battlemusic stoppreview"))))
+								.withClickEvent(runCommandClick("/battlemusic stoppreview"))))
 				.build());
 
 		// Per-folder volume.
@@ -370,6 +370,24 @@ public class ModMenuIntegration implements ModMenuApi {
 		addFolderSongs(songs, eb, c, lib, "Regular Battle", lib.regularTracks(), previewOrder);
 		addFolderSongs(songs, eb, c, lib, "Heavy Battle", lib.heavyTracks(), previewOrder);
 		PreviewRegistry.setEntries(previewOrder);
+	}
+
+	// ClickEvent became a sealed interface with record subtypes in 1.21.5.
+	// These helpers keep the call sites identical across every version.
+	private static ClickEvent openFileClick(Path folder) {
+		//? if >=1.21.5 {
+		return new ClickEvent.OpenFile(folder);
+		//?} else {
+		/*return new ClickEvent(ClickEvent.Action.OPEN_FILE, folder.toString());
+		*///?}
+	}
+
+	private static ClickEvent runCommandClick(String command) {
+		//? if >=1.21.5 {
+		return new ClickEvent.RunCommand(command);
+		//?} else {
+		/*return new ClickEvent(ClickEvent.Action.RUN_COMMAND, command);
+		*///?}
 	}
 
 	private static void addFolderSongs(ConfigCategory songs, ConfigEntryBuilder eb, BattleMusicConfig c,
@@ -409,7 +427,7 @@ public class ModMenuIntegration implements ModMenuApi {
 							.withStyle(s -> s
 									.withColor(ChatFormatting.GREEN)
 									.withUnderlined(true)
-									.withClickEvent(new ClickEvent.RunCommand("/battlemusic preview " + index))))
+									.withClickEvent(runCommandClick("/battlemusic preview " + index))))
 					.build());
 
 			// Per-song volume.
