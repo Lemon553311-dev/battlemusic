@@ -3,7 +3,9 @@ package me.lemon553311.battlemusic.detection;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.EnderMan;
+//? if >=1.19 {
 import net.minecraft.world.entity.monster.warden.Warden;
+//?}
 
 /**
  *
@@ -29,10 +31,12 @@ public final class HostileStateSignals {
 		if (mob instanceof EnderMan enderMan) {
 			if (enderMan.isCreepy()) return true;
 		}
-		// Warden anger drives synced animations.
+		// Warden anger drives synced animations. Warden does not exist before 1.19.
+		//? if >=1.19 {
 		if (mob instanceof Warden) {
 			return true;
 		}
+		//?}
 		return false;
 	}
 }

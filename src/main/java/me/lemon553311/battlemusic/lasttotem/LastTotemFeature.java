@@ -14,8 +14,11 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.Minecraft;
 //? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-//?} else {
+//?} elif >=1.20 {
 /*import net.minecraft.client.gui.GuiGraphics;
+*///?} else {
+/*import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiComponent;
 *///?}
 import net.minecraft.client.player.LocalPlayer;
 //? if >=1.21.5 {
@@ -42,9 +45,11 @@ import net.minecraft.world.item.Items;
  * Multi-version notes (Stonecutter //? directives below):
  *   - HUD registration: HudElementRegistry on 1.21.6+, HudRenderCallback before.
  *   - Class names: Identifier/GuiGraphicsExtractor on 26.1+, ResourceLocation/
- *     GuiGraphics before.
+ *     GuiGraphics on 1.20-1.21.x, ResourceLocation/PoseStack+GuiComponent
+ *     before 1.20.
  *   - Draw call: RenderPipelines blit overload on 1.21.5+, the legacy scaled
- *     GuiGraphics blit + RenderSystem tint before.
+ *     GuiGraphics blit + RenderSystem tint on 1.20-1.21.4, the PoseStack +
+ *     GuiComponent static blit helper (with a manual texture bind) before 1.20.
  * Everything else (totem counting, tick logic, audio) is version-agnostic.
  */
 public final class LastTotemFeature {
@@ -164,8 +169,10 @@ public final class LastTotemFeature {
 
 	//? if >=26.1 {
 	private void onHudRender(GuiGraphicsExtractor graphics) {
-	//?} else {
+	//?} elif >=1.20 {
 	/*private void onHudRender(GuiGraphics graphics) {
+	*///?} else {
+	/*private void onHudRender(PoseStack matrices) {
 	*///?}
 		if (!animActive) return;
 
@@ -210,14 +217,32 @@ public final class LastTotemFeature {
 				IMG_W, IMG_H,
 				IMG_W, IMG_H,
 				color);
-		//?} else {
-		/*// Legacy (<1.21.5) scaled blit: tint via RenderSystem shader color.
+		//?} elif >=1.20 {
+		/*// Legacy (1.20-1.21.4) scaled blit: tint via RenderSystem shader color.
 		// VERIFY on build - see PORTING.md for the exact blit signature per
 		// version if this does not resolve on 1.20.1 / 1.21.0-1.21.4.
 		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
 		graphics.blit(
 				IMAGE,
+				drawX, drawY,
+				drawW, drawH,
+				0f, 0f,
+				IMG_W, IMG_H,
+				IMG_W, IMG_H);
+		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+		*///?} else {
+		/*// Pre-1.20 (1.16-1.19.x): GuiGraphics does not exist yet. Draw via the
+		// PoseStack + GuiComponent static blit helper vanilla screens used at
+		// the time, binding the texture and tint manually first.
+		// VERIFY on build - see PORTING.md; this era predates GuiGraphics and
+		// has not been build-tested here (no internet access in this sandbox).
+		com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, IMAGE);
+		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
+		GuiComponent.blit(
+				matrices,
 				drawX, drawY,
 				drawW, drawH,
 				0f, 0f,

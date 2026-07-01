@@ -24,7 +24,8 @@ val requiredJava: JavaVersion = when {
 	sc.current.parsed >= "26.1" -> JavaVersion.VERSION_25
 	sc.current.parsed >= "1.20.5" -> JavaVersion.VERSION_21
 	sc.current.parsed >= "1.18" -> JavaVersion.VERSION_17
-	else -> JavaVersion.VERSION_17
+	sc.current.parsed >= "1.17" -> JavaVersion.VERSION_16
+	else -> JavaVersion.VERSION_1_8
 }
 
 repositories {
@@ -67,6 +68,10 @@ tasks {
 			"version" to modVersion,
 			"minecraft" to project.property("mod.mc_compat"),
 			"loader" to project.property("mod.loader_compat"),
+			// Per-tier minimum Java level (see requiredJava above and
+			// mod.java_compat in stonecutter.properties.toml) - 1.16 needs Java 8,
+			// 1.17 needs 16, 1.18-1.20.4 need 17, 1.20.5+ needs 21, 26.1+ needs 25.
+			"java" to project.property("mod.java_compat"),
 		)
 		props.forEach { (key, value) -> inputs.property(key, value) }
 		filesMatching("fabric.mod.json") { expand(props) }
