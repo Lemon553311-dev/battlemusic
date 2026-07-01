@@ -80,6 +80,22 @@ errors on those tiers, that's expected -- please share the log and they can be
 fixed the same way. This sandbox has no internet access and cannot compile
 against real Minecraft/Fabric/LWJGL jars to verify beyond static analysis.
 
+## Runtime fix (round 5: 1.16.5 launch crash - "fabric-api missing")
+
+The round-4 jars all *compiled*, but the 1.16.5 jar refused to *launch* with
+"Mod 'Battle Music' requires any version of fabric-api, which is missing" - even
+though Fabric API was installed. Cause: `fabric.mod.json` hard-depended on the
+mod id `fabric-api`, but on 1.16.5-era Fabric API the mod's declared id is
+`fabric`, not `fabric-api` (the `fabric-api` id came later). Modern Fabric API
+still declares `provides: ["fabric"]` as a permanent backwards-compat alias, so
+the universally-correct dependency across the whole 1.16 -> 26.2 range is
+`fabric`. Changed the `depends` entry from `"fabric-api"` to `"fabric"`. This is
+the single dependency id every Fabric API version (oldest to newest) satisfies.
+
+Note: the `cloth-config` entry is only a soft `suggests`, so an id mismatch on
+very old Cloth Config would not block launch - at worst the in-game config
+screen would not register on that version. Not launch-blocking.
+
 ## Build-log-verified fixes (round 4: full --continue log, tiers 1.16.5 / 1.21.4 / 1.21.5 / 26.1.2 / 26.2)
 
 Round 3 cleared 1.17.1 and 1.18.2 and the whole 1.19-1.21.1 band. A second CI
