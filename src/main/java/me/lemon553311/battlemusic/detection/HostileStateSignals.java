@@ -24,11 +24,13 @@ public final class HostileStateSignals {
 
 	public static boolean isObviouslyAggressive(Mob mob) {
 		// Creeper actively fusing toward an explosion.
-		if (mob instanceof Creeper creeper) {
+		if (mob instanceof Creeper) {
+			Creeper creeper = (Creeper) mob;
 			if (creeper.getSwellDir() > 0 || creeper.isIgnited()) return true;
 		}
 		// Enderman angry state is synced for the screaming animation.
-		if (mob instanceof EnderMan enderMan) {
+		if (mob instanceof EnderMan) {
+			EnderMan enderMan = (EnderMan) mob;
 			if (enderMan.isCreepy()) return true;
 		}
 		// Warden anger drives synced animations. Warden does not exist before 1.19.

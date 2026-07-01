@@ -17,6 +17,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -128,12 +129,17 @@ public class AggroTracker {
 		final List<Mob> mobs = new ArrayList<>();
 		final Set<Integer> rangedAttackerIds = new HashSet<>();
 		for (Entity e : world.getEntities(player, area)) {
-			if (e instanceof Mob mob) {
+			if (e instanceof Mob) {
+				Mob mob = (Mob) e;
 				if (mob.distanceToSqr(player) <= radiusSq) mobs.add(mob);
-			} else if (config.rangedAttacksCountAsEngagement && e instanceof Projectile proj) {
+			} else if (config.rangedAttacksCountAsEngagement && e instanceof Projectile) {
+				Projectile proj = (Projectile) e;
 				if (proj.distanceToSqr(player) <= PROJECTILE_ENGAGE_NEAR_SQ) {
 					Entity owner = proj.getOwner();
-					if (owner instanceof Mob ownerMob) rangedAttackerIds.add(ownerMob.getId());
+					if (owner instanceof Mob) {
+						Mob ownerMob = (Mob) owner;
+						rangedAttackerIds.add(ownerMob.getId());
+					}
 				}
 			}
 		}
@@ -179,9 +185,9 @@ public class AggroTracker {
 
 		// Count entities still inside the stickiness window, and prune the rest.
 		int count = 0;
-		var it = lastAggroTick.entrySet().iterator();
+		Iterator<Map.Entry<Integer, Long>> it = lastAggroTick.entrySet().iterator();
 		while (it.hasNext()) {
-			var entry = it.next();
+			Map.Entry<Integer, Long> entry = it.next();
 			Entity tracked = world.getEntity(entry.getKey());
 			boolean expired = now - entry.getValue() > stickinessTicks;
 			boolean gone = tracked == null || !tracked.isAlive()

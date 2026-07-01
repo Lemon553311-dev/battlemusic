@@ -98,10 +98,16 @@ public final class OneShotSound {
 				return;
 			}
 
-			STBVorbisInfo info = STBVorbisInfo.malloc(stack);
-			stb_vorbis_get_info(decoder, info);
-			int channels = info.channels();
-			int sampleRate = info.sample_rate();
+			STBVorbisInfo info = STBVorbisInfo.malloc();
+			int channels;
+			int sampleRate;
+			try {
+				stb_vorbis_get_info(decoder, info);
+				channels = info.channels();
+				sampleRate = info.sample_rate();
+			} finally {
+				info.free();
+			}
 			if (channels < 1 || channels > 2) {
 				BattleMusicClient.LOGGER.warn("[lts] unsupported channel count {} in {}", channels, path);
 				return;

@@ -224,10 +224,14 @@ public class MusicChannel {
 
 			int channels;
 			int sampleRate;
-			STBVorbisInfo info = STBVorbisInfo.malloc(stack);
-			stb_vorbis_get_info(decoder, info);
-			channels = info.channels();
-			sampleRate = info.sample_rate();
+			STBVorbisInfo info = STBVorbisInfo.malloc();
+			try {
+				stb_vorbis_get_info(decoder, info);
+				channels = info.channels();
+				sampleRate = info.sample_rate();
+			} finally {
+				info.free();
+			}
 
 			if (channels < 1 || channels > 2) {
 				BattleMusicClient.LOGGER.warn("[{}] unsupported channel count {} in {}", name, channels, path);

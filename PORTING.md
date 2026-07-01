@@ -31,6 +31,55 @@ signature, registry class, blit call, or renaming), not arbitrary minor-
 version splits. See the inline comment header in `stonecutter.properties.toml`
 for the same table plus registry/Warden/rename notes.
 
+## Build-log-verified fixes (round 3: real CI compile failures)
+
+A real GitHub Actions build log (`Build all versions.txt`, `--continue`-less run
+that stopped at the first 3 failing tiers) surfaced 5 genuine compile errors
+that the earlier "looks-right" refactor missed, because nobody had actually
+compiled this against real Minecraft/Fabric/LWJGL jars yet. Root causes and fixes:
+
+1. **`Component.literal(String)` doesn't exist before 1.19.** It's a Mojmap
+   static factory added in 1.19; older versions use `new TextComponent(string)`
+   (which implements `MutableComponent`, same as `Component.literal(...)`
+   returns). This was the dominant error (400+ "cannot find symbol" errors on
+   1.16.5/1.17.1/1.18.2, all in `ModMenuIntegration.java`, which had zero
+   version gating despite using this call ~100 times). Fixed by adding a
+   private `//? if >=1.19 { ... } else { ... }`-gated `txt(String)` helper and
+   routing every UI string through it instead of calling `Component.literal`
+   directly.
+2. **Pattern-matching `instanceof` (`e instanceof Mob mob`) is Java 16+.**
+   1.16.5 compiles under Java 8 (see `requiredJava` in `build.gradle.kts`), so
+   this syntax is a hard compile error there, with confusing cascading
+   "not a statement" / "orphaned case" / "'else' without 'if'" errors.
+   Rewritten to classic `instanceof` + explicit cast in `AggroTracker.java`,
+   `PlayerDamageTracker.java`, and `HostileStateSignals.java`. This syntax
+   change is version-neutral (works identically on every Java version in this
+   project), so no `//?` gating was needed.
+3. **Arrow-style `switch` expressions (`case X -> ...`) are Java 14+.** Same
+   Java-8-on-1.16.5 problem, found in `ModMenuIntegration.java`'s PvP music
+   pool label switch. Rewritten to a classic `switch` statement with explicit
+   `return`s and a `default` case (also version-neutral, no gating needed).
+4. **Bare `var` local-variable type inference is Java 10+.** 1.16.5's Java 8
+   doesn't support it. Found in `AggroTracker.java` (ungated) and in
+   `BossDetector.java`'s pre-1.19.3 registry branch (which IS reachable on
+   1.16.5). Both replaced with explicit types (`Iterator<Map.Entry<...>>` /
+   `Map.Entry<...>` and `ResourceLocation`).
+5. **`STBVorbisInfo.malloc(stack)` failed on 1.17.1 and 1.18.2** with
+   `incompatible types: MemoryStack cannot be converted to int` -- the
+   single-argument stack-allocating overload wasn't resolving against those
+   tiers' bundled LWJGL. Rather than guess at LWJGL's overload history per MC
+   version without internet access, this was replaced with the universally-
+   stable `STBVorbisInfo.malloc()` (no-arg heap allocation) + an explicit
+   `info.free()` in a `finally` block, in both `MusicChannel.java` and
+   `OneShotSound.java` (which shared the same pattern).
+
+**Known gap / what still needs a real build to confirm:** this CI run used no
+`--continue` flag and stopped at 1.18.2, so 1.19.2 through 26.2 have not been
+compile-tested in any log seen so far. If a fresh build surfaces further
+errors on those tiers, that's expected -- please share the log and they can be
+fixed the same way. This sandbox has no internet access and cannot compile
+against real Minecraft/Fabric/LWJGL jars to verify beyond static analysis.
+
 ## Refactors made to support the full range
 
 - **HUD rendering (`LastHeartFeature.java`, `LastTotemFeature.java`)**: branched

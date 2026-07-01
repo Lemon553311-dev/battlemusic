@@ -11,6 +11,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 /*import net.minecraft.core.Registry;
 *///?}
 import net.minecraft.world.entity.Entity;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
@@ -128,9 +129,9 @@ public class BossDetector {
 		}
 		EntityType<?> type = e.getType();
 		//? if >=1.19.3 {
-		var key = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+		ResourceLocation key = BuiltInRegistries.ENTITY_TYPE.getKey(type);
 		//?} else {
-		/*var key = Registry.ENTITY_TYPE.getKey(type);
+		/*ResourceLocation key = Registry.ENTITY_TYPE.getKey(type);
 		*///?}
 		String id = key.toString();
 		if (config.includeMiniBosses && MINI_BOSS_IDS.contains(id)) return true;
