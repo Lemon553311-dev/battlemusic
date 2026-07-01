@@ -5,14 +5,21 @@ import me.lemon553311.battlemusic.config.BattleMusicConfig;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
+//? if >=1.19.3 {
 import net.minecraft.core.registries.BuiltInRegistries;
+//?} else {
+/*import net.minecraft.core.Registry;
+*///?}
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
+//? if >=1.19 {
 import net.minecraft.world.entity.monster.warden.Warden;
+//?}
 import net.minecraft.world.phys.AABB;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -29,6 +36,11 @@ import java.util.Set;
  * Note: we intentionally do NOT import the registry-key class (its package
  * changed in 26.1). Comparing the registry key's string form keeps this robust
  * across mapping/refactor changes.
+ *
+ * Multi-version notes (Stonecutter //? directives below):
+ *   - Registries moved from Registry.ENTITY_TYPE to BuiltInRegistries.ENTITY_TYPE
+ *     starting exactly at 1.19.3.
+ *   - Warden does not exist before 1.19 and is gated out entirely pre-1.19.
  */
 
 public class BossDetector {
@@ -44,11 +56,11 @@ public class BossDetector {
 
 	// Built-in "sub-boss" tier: tough single mobs the normal "5 mobs" rule misses.
 	// Matched by registry id (no fragile imports), gated by config.includeMiniBosses.
-	private static final Set<String> MINI_BOSS_IDS = Set.of(
+	private static final Set<String> MINI_BOSS_IDS = new HashSet<>(Arrays.asList(
 			"minecraft:elder_guardian",
 			"minecraft:ravager",
 			"minecraft:evoker",
-			"minecraft:piglin_brute");
+			"minecraft:piglin_brute"));
 	private long lastCheckTick = Long.MIN_VALUE;
 	private boolean lastResult = false;
 
@@ -89,7 +101,11 @@ public class BossDetector {
 			if (e.distanceToSqr(player) > rSq) continue;
 			if (isBoss(e)) {
 				BattleMusicClient.debug("Boss detected: {} (~{} blocks)",
+						//? if >=1.19.3 {
 						BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()),
+						//?} else {
+						/*Registry.ENTITY_TYPE.getKey(e.getType()),
+						*///?}
 						String.format(Locale.ROOT, "%.1f", Math.sqrt(e.distanceToSqr(player))));
 				lastResult = true;
 				return true;
@@ -100,15 +116,26 @@ public class BossDetector {
 	}
 
 	private boolean isBoss(Entity e) {
-		if (e instanceof EnderDragon || e instanceof WitherBoss || e instanceof Warden) {
+		if (e instanceof EnderDragon || e instanceof WitherBoss) {
 			return true;
 		}
+		//? if >=1.19 {
+		if (e instanceof Warden) {
+			return true;
+		}
+		//?}
 		if (!config.includeMiniBosses && extraBossIds.isEmpty()) {
 			return false;
 		}
 		EntityType<?> type = e.getType();
-		var key = BuiltInRegistries.ENTITY_TYPE.getKey(type);
-		String id = key.toString();
+		// Never name the registry-key type: it is ResourceLocation up to 1.21.x but
+		// was renamed to Identifier in 26.1. Calling toString() inline keeps this
+		// robust across that rename (and needs no import at all).
+		//? if >=1.19.3 {
+		String id = BuiltInRegistries.ENTITY_TYPE.getKey(type).toString();
+		//?} else {
+		/*String id = Registry.ENTITY_TYPE.getKey(type).toString();
+		*///?}
 		if (config.includeMiniBosses && MINI_BOSS_IDS.contains(id)) return true;
 		return extraBossIds.contains(id);
 	}

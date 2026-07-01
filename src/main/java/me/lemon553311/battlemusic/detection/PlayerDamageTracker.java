@@ -183,7 +183,8 @@ public class PlayerDamageTracker {
 		for (Entity e : world.getEntities(self, area)) {
 			if (e.getId() == selfId) continue;
 
-			if (e instanceof Player other) {
+			if (e instanceof Player) {
+				Player other = (Player) e;
 				if (other.isAlive() && other.swinging
 						&& other.distanceToSqr(self) <= reachSq
 						&& facingToward(other, self)) {
@@ -193,12 +194,15 @@ public class PlayerDamageTracker {
 				continue;
 			}
 
-			if (e instanceof Projectile proj) {
+			if (e instanceof Projectile) {
+				Projectile proj = (Projectile) e;
 				Entity owner = proj.getOwner();
-				if (owner instanceof Player p && p.getId() != selfId
-						&& proj.distanceToSqr(self) <= projNearSq) {
-					lastProjectileThreatTick = now;
-					lastProjectileAttackerId = p.getId();
+				if (owner instanceof Player) {
+					Player p = (Player) owner;
+					if (p.getId() != selfId && proj.distanceToSqr(self) <= projNearSq) {
+						lastProjectileThreatTick = now;
+						lastProjectileAttackerId = p.getId();
+					}
 				}
 			}
 		}
