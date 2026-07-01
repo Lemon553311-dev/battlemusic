@@ -352,12 +352,12 @@ public class ModMenuIntegration implements ModMenuApi {
 		// Where to drop your .ogg files. The path itself is a clickable link that
 		// opens the folder in the OS file browser. Cloth's text entry forwards style
 		// clicks to Screen.handleComponentClicked, which handles the vanilla OPEN_FILE
-		// click event. The ClickEvent API became a sealed record hierarchy in 1.21.6
+		// click event. The ClickEvent API became a sealed record hierarchy in 1.21.5
 		// (ClickEvent.OpenFile), so that branch builds it directly; everything before
-		// uses the classic (Action, String) constructor. Fully-qualified names keep
-		// the import block version-agnostic.
+		// (<=1.21.4) uses the classic (Action, String) constructor. Fully-qualified
+		// names keep the import block version-agnostic.
 		final String musicFolderPath = lib.getRootFolder().toAbsolutePath().toString();
-		//? if >=1.21.6 {
+		//? if >=1.21.5 {
 		MutableComponent folderLink = txt(musicFolderPath).withStyle(s -> s
 				.withColor(ChatFormatting.BLUE)
 				.withUnderlined(true)
