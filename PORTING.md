@@ -51,18 +51,47 @@ for the same table plus registry/Warden/rename notes.
 ## Dependency version verification log
 
 All pinned `deps.fabric_api`, `deps.modmenu`, and `deps.cloth_config` values in
-`stonecutter.properties.toml` were checked against the live Modrinth API
-(`api.modrinth.com/v2/project/{slug}/version`) for the exact `game_versions`
-and `fabric` loader filter. Three pins were wrong and have been corrected:
+`stonecutter.properties.toml` were first checked against the live Modrinth API
+(`api.modrinth.com/v2/project/{slug}/version`). That pass caught 3 wrong
+version numbers, but a real CI build later failed on
+`me.shedaniel.cloth:cloth-config-fabric:8.3.115+fabric`, which exposed a
+deeper problem: **Modrinth's `version_number` field for Cloth Config includes
+a `+fabric` suffix that does not exist in the real Maven artifact version**
+published to `maven.shedaniel.me` (and mirrored to `maven.fabricmc.net`). The
+actual Gradle dependency notation in `build.gradle.kts` is
+`me.shedaniel.cloth:cloth-config-fabric:${deps.cloth_config}` with no suffix
+appended, so any pin copied verbatim from Modrinth's version string was
+broken.
+
+All `deps.cloth_config` pins were re-verified directly against the real
+Maven directory listing at
+`https://maven.shedaniel.me/me/shedaniel/cloth/cloth-config-fabric/` (the
+same repo Gradle resolves against), and every `+fabric` suffix was stripped.
+All `deps.fabric_api` pins were independently re-verified against
+`https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/` directory
+listings (exact folder match for every tier) and needed no changes, since
+Fabric API's real Maven version strings do already include the `+<mcversion>`
+suffix.
 
 | Tier | Dependency | Old (wrong) pin | Corrected pin | Note |
 |---|---|---|---|---|
-| 1.17.1 | Cloth Config | `5.0.38` | `5.3.63` | `5.0.38` does not exist for 1.17.1 on Modrinth; only `5.3.63` and `5.3.58+fabric` are published for that game version. |
-| 1.20.4 | Cloth Config | `12.0.118+fabric` | `13.0.138+fabric` | `12.0.118+fabric` does not exist; `13.0.138+fabric` is a real published version for 1.20.2-1.20.4. |
-| 1.21.5 | Cloth Config | `18.0.146+fabric` | `18.0.145+fabric` | `18.0.146+fabric` does not exist; `18.0.145+fabric` is the real published version for 1.21.5. |
+| 1.17.1 | Cloth Config | `5.0.38` | `5.3.63` | `5.0.38` does not exist for 1.17.1; only `5.3.63` and `5.3.58` are published for that game version. |
+| 1.19.2 | Cloth Config | `8.3.115+fabric` | `8.3.115` | Real Maven version has no `+fabric` suffix. |
+| 1.19.4 | Cloth Config | `10.1.135+fabric` | `10.1.135` | Real Maven version has no `+fabric` suffix. |
+| 1.20.4 | Cloth Config | `12.0.118+fabric` | `13.0.138` | `12.0.118` does not exist; `13.0.138` is the real published version for 1.20.2-1.20.4, with no `+fabric` suffix. |
+| 1.20.6 | Cloth Config | `14.0.126+fabric` | `14.0.126` | Real Maven version has no `+fabric` suffix. |
+| 1.21.4 | Cloth Config | `17.0.144+fabric` | `17.0.144` | Real Maven version has no `+fabric` suffix. |
+| 1.21.5 | Cloth Config | `18.0.146+fabric` | `18.0.145` | `18.0.146` does not exist; `18.0.145` is the real published version for 1.21.5, with no `+fabric` suffix. |
 
-Every other pinned Fabric API, Mod Menu, and Cloth Config version across all
-14 tiers was confirmed to exist exactly as published on Modrinth for that
-game version and loader. `mod.loader_compat` entries are loose minimum-version
-bounds (not exact pins) and were left as-is; any reasonably current Fabric
-Loader release satisfies them.
+Every Fabric API pin across all 14 tiers was confirmed to exist exactly as a
+real published folder on `maven.fabricmc.net`. Mod Menu pins were confirmed
+against Modrinth; Mod Menu's Maven host (`maven.terraformersmc.com`) could
+not be reached from this sandbox to cross-check directly (repeated
+timeouts), but Mod Menu's dependency notation takes the version string
+verbatim with no suffix, and none of the pinned Mod Menu values carry a
+suffix, so the Cloth Config failure mode does not apply to it. If a Mod Menu
+version also fails to resolve, check
+`https://maven.terraformersmc.com/releases/com/terraformersmc/modmenu/` for
+the exact real version string. `mod.loader_compat` entries are loose
+minimum-version bounds (not exact pins) and were left as-is; any reasonably
+current Fabric Loader release satisfies them.

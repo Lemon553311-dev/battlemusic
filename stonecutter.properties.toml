@@ -67,7 +67,7 @@ mod.mc_releases = "1.19,1.19.1,1.19.2"
 mod.java_compat = ">=17"
 deps.fabric_api = "0.76.0+1.19.2"
 deps.modmenu = "4.1.2"               # confirmed on Modrinth
-deps.cloth_config = "8.3.115+fabric"
+deps.cloth_config = "8.3.115"
 
 # ---- 1.19.3-1.19.4: pre-GuiGraphics, BuiltInRegistries now exists, Java 17 ----
 ["1.19.4"]
@@ -77,7 +77,7 @@ mod.mc_releases = "1.19.3,1.19.4"
 mod.java_compat = ">=17"
 deps.fabric_api = "0.87.2+1.19.4"
 deps.modmenu = "6.3.1"
-deps.cloth_config = "10.1.135+fabric"
+deps.cloth_config = "10.1.135"
 
 # ---- 1.20-1.20.1: first GuiGraphics version, Java 17 ----
 ["1.20.1"]
@@ -97,7 +97,7 @@ mod.mc_releases = "1.20.2,1.20.3,1.20.4"
 mod.java_compat = ">=17"
 deps.fabric_api = "0.96.0+1.20.4"
 deps.modmenu = "9.0.0"
-deps.cloth_config = "13.0.138+fabric" # corrected - 12.0.118+fabric does not exist on Modrinth
+deps.cloth_config = "13.0.138"       # corrected - 12.0.118+fabric does not exist on Maven
 
 # ---- 1.20.5-1.20.6: GuiGraphics era, Mojang bumped required Java to 21 here ----
 ["1.20.6"]
@@ -107,7 +107,7 @@ mod.mc_releases = "1.20.5,1.20.6"
 mod.java_compat = ">=21"
 deps.fabric_api = "0.98.0+1.20.6"
 deps.modmenu = "10.0.0"              # confirmed on Modrinth
-deps.cloth_config = "14.0.126+fabric"
+deps.cloth_config = "14.0.126"
 
 # ---- 1.21-1.21.1: GuiGraphics era, legacy blit, Java 21 ----
 ["1.21.1"]
@@ -127,7 +127,7 @@ mod.mc_releases = "1.21.2,1.21.3,1.21.4"
 mod.java_compat = ">=21"
 deps.fabric_api = "0.111.0+1.21.4"
 deps.modmenu = "13.0.2"
-deps.cloth_config = "17.0.144+fabric" # confirmed on Modrinth
+deps.cloth_config = "17.0.144"       # corrected - Maven artifact versions never carry a +fabric suffix
 
 # ---- 1.21.5: RenderPipelines blit introduced (isolated tier), Java 21 ----
 ["1.21.5"]
@@ -137,7 +137,7 @@ mod.mc_releases = "1.21.5"
 mod.java_compat = ">=21"
 deps.fabric_api = "0.125.0+1.21.5"   # confirmed on Modrinth
 deps.modmenu = "14.0.0"              # confirmed on Modrinth
-deps.cloth_config = "18.0.145+fabric" # corrected - 18.0.146+fabric does not exist on Modrinth
+deps.cloth_config = "18.0.145"       # corrected - Maven artifact versions never carry a +fabric suffix
 
 # ---- 1.21.6-1.21.8: new HUD API (HudElementRegistry), Java 21 ----
 ["1.21.8"]
