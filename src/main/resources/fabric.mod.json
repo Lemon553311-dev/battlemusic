@@ -9,7 +9,10 @@
 	],
 
 	"contact": {
-		"discords": "Lemon553311"
+		"homepage": "https://modrinth.com/mod/battle-music",
+		"sources": "https://github.com/Lemon553311-dev/battlemusic",
+		"issues": "https://github.com/Lemon553311-dev/battlemusic/issues",
+		"Discords": "Lemon553311"
 	},
 
 	"license": "MIT",
