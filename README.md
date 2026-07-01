@@ -2,7 +2,7 @@
 
 This mod plays your imported music during mob/PVP battles.
 
-**Version support: Minecraft 1.20.1, 1.21.x, and 26.x (Fabric)**
+**Version support: Minecraft 1.16.5 - 26.2 (Fabric)**
 
 ## Features
 
@@ -15,7 +15,7 @@ This mod plays your imported music during mob/PVP battles.
 
 ## Dependencies
 
-1. Requires [Fabric Loader](https://fabricmc.net/use/) for Minecraft 26.1 or 26.2.
+1. Requires [Fabric Loader](https://fabricmc.net/use/)
 2. [Fabric API](https://modrinth.com/mod/fabric-api)
 3. (optional, very recommended) [Mod Menu](https://modrinth.com/mod/modmenu) and [Cloth Config](https://modrinth.com/mod/cloth-config)
 
