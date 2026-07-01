@@ -21,9 +21,11 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.GuiComponent;
 *///?}
 import net.minecraft.client.player.LocalPlayer;
-//? if >=1.21.5 {
+//? if >=1.21.6 {
 import net.minecraft.client.renderer.RenderPipelines;
-//?}
+//?} elif >=1.21.2 {
+/*import net.minecraft.client.renderer.RenderType;
+*///?}
 //? if >=26.1 {
 import net.minecraft.resources.Identifier;
 //?} else {
@@ -131,7 +133,11 @@ public final class LastTotemFeature {
 	}
 
 	private int countTotems(LocalPlayer player) {
+		//? if >=1.17 {
 		Inventory inv = player.getInventory();
+		//?} else {
+		/*Inventory inv = player.inventory;
+		*///?}
 		int total = 0;
 		// The Inventory container spans hotbar + main + armor + offhand in vanilla.
 		int size = inv.getContainerSize();
@@ -143,7 +149,11 @@ public final class LastTotemFeature {
 		// A totem held on the mouse cursor lives on the open menu, not the Inventory
 		// container, so count it here too to avoid a false dip to 1.
 		if (player.containerMenu != null) {
+			//? if >=1.17 {
 			ItemStack carried = player.containerMenu.getCarried();
+			//?} else {
+			/*ItemStack carried = player.inventory.getCarried();
+			*///?}
 			if (isTotem(carried)) {
 				total += carried.getCount();
 			}
@@ -205,8 +215,8 @@ public final class LastTotemFeature {
 		int a = Math.max(0, Math.min(255, Math.round(alpha * 255f)));
 		int color = (a << 24) | 0x00FFFFFF; // white tint, animated alpha (ARGB)
 
-		//? if >=1.21.5 {
-		// 1.21.5+ blit: (pipeline, texture, x, y, u, v, drawW, drawH,
+		//? if >=1.21.6 {
+		// 1.21.6+ blit: (pipeline, texture, x, y, u, v, drawW, drawH,
 		//                regionW, regionH, texW, texH, argbColor).
 		graphics.blit(
 				RenderPipelines.GUI_TEXTURED,
@@ -217,7 +227,20 @@ public final class LastTotemFeature {
 				IMG_W, IMG_H,
 				IMG_W, IMG_H,
 				color);
-		//?} elif >=1.20 {
+		//?} elif >=1.21.2 {
+		/*// 1.21.2-1.21.5 blit: same 13-arg shape, but the first parameter is a
+		// Function<ResourceLocation, RenderType> (RenderType::guiTextured) rather
+		// than a RenderPipeline. The RenderPipeline overload only exists in 1.21.6+.
+		graphics.blit(
+				RenderType::guiTextured,
+				IMAGE,
+				drawX, drawY,
+				0, 0,
+				drawW, drawH,
+				IMG_W, IMG_H,
+				IMG_W, IMG_H,
+				color);
+		*///?} elif >=1.20 {
 		/*// Legacy (1.20-1.21.4) scaled blit: tint via RenderSystem shader color.
 		// VERIFY on build - see PORTING.md for the exact blit signature per
 		// version if this does not resolve on 1.20.1 / 1.21.0-1.21.4.
@@ -232,12 +255,10 @@ public final class LastTotemFeature {
 				IMG_W, IMG_H);
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
-		*///?} else {
-		/*// Pre-1.20 (1.16-1.19.x): GuiGraphics does not exist yet. Draw via the
-		// PoseStack + GuiComponent static blit helper vanilla screens used at
-		// the time, binding the texture and tint manually first.
-		// VERIFY on build - see PORTING.md; this era predates GuiGraphics and
-		// has not been build-tested here (no internet access in this sandbox).
+		*///?} elif >=1.17 {
+		/*// 1.17-1.19.x: GuiGraphics does not exist yet, but the 1.17 RenderSystem
+		// shader API (setShaderTexture/setShaderColor) does. Draw via the PoseStack
+		// + GuiComponent static blit helper, tinting through the shader color.
 		com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, IMAGE);
 		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
@@ -249,6 +270,22 @@ public final class LastTotemFeature {
 				IMG_W, IMG_H,
 				IMG_W, IMG_H);
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+		*///?} else {
+		/*// 1.16.5 (Java 8): the 1.17 RenderSystem shader API does not exist yet.
+		// Bind the texture via the TextureManager and tint with the legacy
+		// fixed-function color4f call, then use the same GuiComponent blit helper.
+		mc.getTextureManager().bind(IMAGE);
+		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+		com.mojang.blaze3d.systems.RenderSystem.color4f(1f, 1f, 1f, alpha);
+		GuiComponent.blit(
+				matrices,
+				drawX, drawY,
+				drawW, drawH,
+				0f, 0f,
+				IMG_W, IMG_H,
+				IMG_W, IMG_H);
+		com.mojang.blaze3d.systems.RenderSystem.color4f(1f, 1f, 1f, 1f);
 		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
 		*///?}
 	}

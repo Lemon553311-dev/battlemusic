@@ -80,6 +80,70 @@ errors on those tiers, that's expected -- please share the log and they can be
 fixed the same way. This sandbox has no internet access and cannot compile
 against real Minecraft/Fabric/LWJGL jars to verify beyond static analysis.
 
+## Build-log-verified fixes (round 4: full --continue log, tiers 1.16.5 / 1.21.4 / 1.21.5 / 26.1.2 / 26.2)
+
+Round 3 cleared 1.17.1 and 1.18.2 and the whole 1.19-1.21.1 band. A second CI
+log, this time built with `--continue`, exposed every remaining tier at once.
+Only five tiers still failed, and the failures split into five clean causes:
+
+### 1.16.5 (Java 8 + oldest Mojmap) - the bulk of the remaining errors
+1. **SLF4J does not exist before 1.17.** Minecraft only bundled `org.slf4j`
+   from 1.17 onward; 1.16.5 logs through Log4j2. Gated `BattleMusicClient`'s
+   logger imports + field: `org.slf4j` + `LoggerFactory.getLogger` on 1.17+,
+   `org.apache.logging.log4j` + `LogManager.getLogger` on 1.16.5. Both `Logger`
+   types accept the same `{}`-parameterized `info/warn(String, Object...)` and
+   `warn(String, Throwable)` calls the mod already uses, so no call sites change.
+2. **`Files.readString` / `Files.writeString` are Java 11.** 1.16.5 runs Java 8.
+   Replaced (unconditionally, since the replacements work on every Java version)
+   with `new String(Files.readAllBytes(p), StandardCharsets.UTF_8)` and
+   `Files.write(p, s.getBytes(StandardCharsets.UTF_8))` in `BattleMusicConfig`
+   and `MusicLibrary`.
+3. **`Set.of(...)` is Java 9.** Replaced the `MINI_BOSS_IDS` initializer in
+   `BossDetector` with `new HashSet<>(Arrays.asList(...))` (version-neutral).
+4. **1.17-era Entity/Player accessors.** On 1.16.5 several getters did not exist
+   yet: `Entity.getEyePosition()` (no-arg overload; 1.16.5 requires a
+   partial-tick float, so pass `1.0F` via a small gated `eyePos()` helper in
+   `AggroTracker`), `Entity.getXRot()` (use the public `xRot` field on 1.16.5),
+   `LocalPlayer.getInventory()` (use the public `inventory` field), and
+   `AbstractContainerMenu.getCarried()` (the carried stack lived on
+   `player.inventory.getCarried()` before 1.17). Each is gated `>=1.17` vs else.
+5. **The 1.17 RenderSystem shader API in the pre-1.20 HUD path.**
+   `RenderSystem.setShaderTexture` / `setShaderColor` were added in 1.17, but the
+   pre-1.20 blit branch (shared by 1.16.5-1.19.4) used them unconditionally.
+   Split that branch: 1.17-1.19.x keeps `setShaderTexture`/`setShaderColor`;
+   1.16.5 binds via `TextureManager.bind(...)` and tints with the legacy
+   fixed-function `RenderSystem.color4f(...)` instead.
+
+### 1.21.4 and 1.21.5 - the blit boundary was one version too low
+The `GuiGraphics.blit` first parameter changed from `ResourceLocation` to
+`Function<ResourceLocation, RenderType>` in **1.21.2** (not 1.21.5), and then to
+`RenderPipeline` in **1.21.6** (not 1.21.5). The old gating assumed
+`RenderPipeline` from 1.21.5, so 1.21.4 (still on the plain-`ResourceLocation`
+legacy branch) and 1.21.5 (wrongly on the `RenderPipeline` branch) both failed
+with "incompatible types" on the first argument. Re-split the draw call into
+three modern branches: `>=1.21.6` -> `RenderPipelines.GUI_TEXTURED`,
+`>=1.21.2` -> `RenderType::guiTextured` (same 13-arg shape, `Function` first
+arg), `>=1.20` -> the original `ResourceLocation` legacy blit. Applied in both
+`LastHeartFeature` and `LastTotemFeature`.
+
+### 26.1.2 and 26.2 - a class I introduced in round 3 was renamed in 26.1
+Round 3 added `import net.minecraft.resources.ResourceLocation;` to
+`BossDetector` to give the registry key an explicit type (to dodge Java 8's lack
+of `var`). But 26.1 renamed that class to `net.minecraft.resources.Identifier`,
+so the hard import broke 26.1.2/26.2 - exactly the mistake the file's own header
+comment warns against. Fix: never name the key type at all. The two branches now
+call `.getKey(type).toString()` inline (`BuiltInRegistries` on 1.19.3+,
+`Registry` before), so no `ResourceLocation`/`Identifier`/`var` is needed on any
+tier.
+
+### Remaining uncertainty (no local compiler in this sandbox)
+The 1.16.5 mapping details above (`Entity.xRot`, `getEyePosition(1.0F)`,
+`player.inventory` / `player.inventory.getCarried()`, `TextureManager.bind`,
+`RenderSystem.color4f`) are the best-known 1.16.5 Mojmap forms but could not be
+compiled here. If 1.16.5 still errors, its next log will pinpoint any exact
+method/field-name differences to adjust. All other tiers (1.17.1-26.2) are
+expected to compile now; the middle band already did in the round-3 log.
+
 ## Refactors made to support the full range
 
 - **HUD rendering (`LastHeartFeature.java`, `LastTotemFeature.java`)**: branched

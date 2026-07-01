@@ -8,6 +8,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -162,7 +163,7 @@ public class BattleMusicConfig {
 
 		try {
 			if (Files.exists(p)) {
-				String json = Files.readString(p);
+				String json = new String(Files.readAllBytes(p), StandardCharsets.UTF_8);
 				BattleMusicConfig cfg = GSON.fromJson(json, BattleMusicConfig.class);
 
 				if (cfg != null) {
@@ -185,7 +186,7 @@ public class BattleMusicConfig {
 
 		try {
 			Files.createDirectories(path().getParent());
-			Files.writeString(path(), GSON.toJson(this));
+			Files.write(path(), GSON.toJson(this).getBytes(StandardCharsets.UTF_8));
 
 		} catch (IOException e) {
 			BattleMusicClient.LOGGER.warn("Failed to save config", e);

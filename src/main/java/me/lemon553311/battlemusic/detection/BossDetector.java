@@ -11,7 +11,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 /*import net.minecraft.core.Registry;
 *///?}
 import net.minecraft.world.entity.Entity;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
@@ -20,6 +19,7 @@ import net.minecraft.world.entity.monster.warden.Warden;
 //?}
 import net.minecraft.world.phys.AABB;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -56,11 +56,11 @@ public class BossDetector {
 
 	// Built-in "sub-boss" tier: tough single mobs the normal "5 mobs" rule misses.
 	// Matched by registry id (no fragile imports), gated by config.includeMiniBosses.
-	private static final Set<String> MINI_BOSS_IDS = Set.of(
+	private static final Set<String> MINI_BOSS_IDS = new HashSet<>(Arrays.asList(
 			"minecraft:elder_guardian",
 			"minecraft:ravager",
 			"minecraft:evoker",
-			"minecraft:piglin_brute");
+			"minecraft:piglin_brute"));
 	private long lastCheckTick = Long.MIN_VALUE;
 	private boolean lastResult = false;
 
@@ -128,12 +128,14 @@ public class BossDetector {
 			return false;
 		}
 		EntityType<?> type = e.getType();
+		// Never name the registry-key type: it is ResourceLocation up to 1.21.x but
+		// was renamed to Identifier in 26.1. Calling toString() inline keeps this
+		// robust across that rename (and needs no import at all).
 		//? if >=1.19.3 {
-		ResourceLocation key = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+		String id = BuiltInRegistries.ENTITY_TYPE.getKey(type).toString();
 		//?} else {
-		/*ResourceLocation key = Registry.ENTITY_TYPE.getKey(type);
+		/*String id = Registry.ENTITY_TYPE.getKey(type).toString();
 		*///?}
-		String id = key.toString();
 		if (config.includeMiniBosses && MINI_BOSS_IDS.contains(id)) return true;
 		return extraBossIds.contains(id);
 	}

@@ -4,6 +4,7 @@ run/
 .idea/
 *.iml
 out/
+.kilo
 .vscode/
 .stonecutter/
 versions/*/build/

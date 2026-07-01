@@ -14,8 +14,13 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 
 
+//? if >=1.17 {
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+//?} else {
+/*import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+*///?}
 
 /**
  *
@@ -26,7 +31,11 @@ import org.slf4j.LoggerFactory;
 
 public class BattleMusicClient implements ClientModInitializer {
 	public static final String MOD_ID = "battlemusic";
+	//? if >=1.17 {
 	public static final Logger LOGGER = LoggerFactory.getLogger("BattleMusic");
+	//?} else {
+	/*public static final Logger LOGGER = LogManager.getLogger("BattleMusic");
+	*///?}
 	private static BattleMusicConfig config;
 	private static AudioEngine audioEngine;
 	private static MusicLibrary library;

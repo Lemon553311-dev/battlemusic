@@ -116,7 +116,7 @@ public class AggroTracker {
 		final double radius = config.detectionRadius;
 		final double radiusSq = radius * radius;
 		final long stickinessTicks = Math.round(config.aggroStickinessSeconds * 20.0);
-		final Vec3 playerEye = player.getEyePosition();
+		final Vec3 playerEye = eyePos(player);
 
 		// Track which mobs are in range this tick so we can prune stale memory
 		// afterwards (otherwise the per-entity maps leak ids of despawned mobs).
@@ -311,18 +311,22 @@ public class AggroTracker {
 		if (config.headAimChecksPitch) {
 			// Reject a mob that can only crane near-straight up/down at us (we climbed out
 			// of its reach). Minecraft pitch: negative = looking up, positive = looking down.
-			Vec3 eye = mob.getEyePosition();
+			Vec3 eye = eyePos(mob);
 			double horiz = Math.sqrt(dx * dx + dz * dz);
 			double dy = playerEye.y - eye.y;
 			double targetPitch = -Math.toDegrees(Math.atan2(dy, Math.max(1.0e-4, horiz)));
+			//? if >=1.17 {
 			double pitchDiff = Math.abs(Mth.wrapDegrees(targetPitch - mob.getXRot()));
+			//?} else {
+			/*double pitchDiff = Math.abs(Mth.wrapDegrees(targetPitch - mob.xRot));
+			*///?}
 			if (pitchDiff > VERTICAL_AIM_TOLERANCE_DEG) return false;
 		}
 		return true;
 	}
 
 	private boolean hasLineOfSight(Mob mob, ClientLevel world, Vec3 playerEye) {
-		Vec3 from = mob.getEyePosition();
+		Vec3 from = eyePos(mob);
 		ClipContext ctx = new ClipContext(from, playerEye,
 				ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, mob);
 		return world.clip(ctx).getType() == HitResult.Type.MISS;
@@ -332,4 +336,16 @@ public class AggroTracker {
 		// Enemy covers zombies, skeletons, creepers, spiders, piglins, etc.
 		return mob instanceof Enemy;
 	}
+
+	// Entity.getEyePosition() gained its no-arg overload in 1.17; on 1.16.5 the
+	// only overload takes a partial-tick float, so pass 1.0F (fully-ticked eye).
+	//? if >=1.17 {
+	private static Vec3 eyePos(Entity e) {
+		return e.getEyePosition();
+	}
+	//?} else {
+	/*private static Vec3 eyePos(Entity e) {
+		return e.getEyePosition(1.0F);
+	}
+	*///?}
 }
