@@ -4,8 +4,8 @@ run/
 .idea/
 *.iml
 out/
-.kilo
 .vscode/
+.kilo
 .stonecutter/
 versions/*/build/
 versions/*/.gradle/

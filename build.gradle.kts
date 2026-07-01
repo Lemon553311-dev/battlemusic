@@ -72,6 +72,11 @@ tasks {
 			// mod.java_compat in stonecutter.properties.toml) - 1.16 needs Java 8,
 			// 1.17 needs 16, 1.18-1.20.4 need 17, 1.20.5+ needs 21, 26.1+ needs 25.
 			"java" to project.property("mod.java_compat"),
+			// Fabric API's mod id is version-dependent ("fabric" pre-1.19.3,
+			// "fabric-api" from 1.19.3 on, with the "fabric" alias removed in 26.1),
+			// so it is pinned per tier as mod.fabric_api_id and substituted into
+			// fabric.mod.json's depends block via the ${fabric_api_id} placeholder.
+			"fabric_api_id" to project.property("mod.fabric_api_id"),
 		)
 		props.forEach { (key, value) -> inputs.property(key, value) }
 		filesMatching("fabric.mod.json") { expand(props) }

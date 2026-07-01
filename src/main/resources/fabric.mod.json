@@ -28,7 +28,7 @@
 		"fabricloader": "${loader}",
 		"minecraft": "${minecraft}",
 		"java": "${java}",
-		"fabric": "*"
+		"${fabric_api_id}": "*"
 	},
 
 	"suggests": {

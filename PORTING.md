@@ -224,3 +224,50 @@ version also fails to resolve, check
 the exact real version string. `mod.loader_compat` entries are loose
 minimum-version bounds (not exact pins) and were left as-is; any reasonably
 current Fabric Loader release satisfies them.
+
+## Round 6 — clickable music-folder link (Songs tab)
+
+The Songs tab previously showed the music folder as a plain gray text label.
+It is now a clickable link (blue + underlined) that opens the folder in the
+OS file browser.
+
+- **Mechanism:** the path is a `Component` carrying a vanilla `OPEN_FILE`
+  click event. Cloth Config's `startTextDescription` entry forwards style
+  clicks to `Screen.handleComponentClicked`, which vanilla implements as
+  "open this file/folder in the OS file browser" (same path used by the
+  screenshot / resource-pack-folder links).
+- **Version split:** the `ClickEvent` API became a sealed record hierarchy at
+  exactly **1.21.6**. That branch constructs `new ClickEvent.OpenFile(path)`
+  directly; every version below uses the classic
+  `new ClickEvent(ClickEvent.Action.OPEN_FILE, path)` constructor. Guarded by
+  a `//? if >=1.21.6 { ... //?} else { ... //?}` directive in
+  `ModMenuIntegration.java`.
+- Fully-qualified `net.minecraft.network.chat.ClickEvent` names are used so no
+  new (version-gated) import is needed. `Style.withColor(ChatFormatting)`,
+  `withUnderlined(Boolean)`, `withClickEvent`, and `MutableComponent.append`
+  all exist across 1.16.5 -> 26.2.
+
+## Round 7 - Fabric API mod-id split (1.19.3 boundary) + hardened folder link
+
+**Symptom:** 26.2 crashed at load: `requires any version of fabric, which is missing!`
+(HARD_DEP `{depends fabric @ [*]}`). Round 5 had globally set the Fabric API
+dependency id to `fabric`, which fixed 1.16.5 but broke 26.1/26.2.
+
+**Root cause (web-confirmed against Fabric's official changelogs):** Fabric
+API's mod id is version-dependent and there is NO universal value:
+  - pre-1.19.3   : id is `fabric` (`fabric-api` does not exist yet)
+  - 1.19.3-1.21.x: renamed to `fabric-api` (`fabric` kept as an alias)
+  - 26.1+        : the `fabric` alias was REMOVED; only `fabric-api` works
+
+**Fix:** replaced the hardcoded id in `fabric.mod.json` depends with the
+`${fabric_api_id}` template placeholder, wired `mod.fabric_api_id` through
+`build.gradle.kts` processResources expand(), and pinned it per tier in
+`stonecutter.properties.toml`: shared default `fabric-api`, overridden to
+`fabric` in the four pre-1.19.3 tiers (1.16.5, 1.17.1, 1.18.2, 1.19.2). The
+1.19.3 boundary falls exactly on a tier edge (the 1.19.4 tier starts at
+1.19.3), so no tier straddles it. This resolves the entire class of
+per-version-metadata launch failures, not just 26.2.
+
+**Also (round-6 hardening):** the >=1.21.6 clickable music-folder link now uses
+the web-confirmed `ClickEvent.OpenFile(java.io.File)` constructor instead of the
+String overload, to avoid depending on an unverified signature.
