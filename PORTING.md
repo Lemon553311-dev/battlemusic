@@ -391,6 +391,19 @@ for both loaders.
 - All 28 target expansions (14 fabric + 6 forge + 8 neoforge) pass a javac 25
   parse with only missing-classpath diagnostics (no syntax/shape errors).
 
+**Round 8c (third CI run):** configuration cleared every Forge tier and
+NeoForge 20.4/20.6/21.1/21.4 with the exact pins, then died on
+`:1.21.5:modImplementation`: the TerraformersMC maven returned a 400 for
+`modmenu-14.0.0.jar` while having served ten older Mod Menu jars in the same
+run (flaky host - it also rejects automated requests). The version string is
+correct (verified against the Modrinth API, jar name `modmenu-14.0.0.jar`).
+Fix: the Modrinth maven (`api.modrinth.com/maven`, group `maven.modrinth`,
+exclusive-content filtered) was added as an alternate source, and the 1.21.5 /
+1.21.8 tiers set `deps.modmenu_from_modrinth = "true"` to pull the identical
+jar from there. The 26.x tiers stay on TerraformersMC (their exact pins are
+not Modrinth-confirmed but resolved from TerraformersMC in earlier CI runs);
+flip the same flag for them if that host misbehaves again.
+
 **Still unverifiable offline (the remaining candidates if a tier fails):**
 1. Fabric 26.1.2 / 26.2 under Architectury Loom with no mappings call
    (loom-back-compat handled non-obf internally; mainline loom should too).

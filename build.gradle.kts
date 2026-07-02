@@ -53,6 +53,15 @@ val requiredJava: JavaVersion = when {
 
 repositories {
 	maven("https://maven.terraformersmc.com/releases") { name = "TerraformersMC" }
+	// Fallback source for Mod Menu: the TerraformersMC maven intermittently
+	// rejects artifact downloads (CI got a 400 on modmenu-14.0.0.jar while
+	// serving ten other Mod Menu jars fine in the same run). The Modrinth maven
+	// serves the identical jars under the maven.modrinth group; the exclusive
+	// filter keeps it from ever intercepting other lookups.
+	exclusiveContent {
+		forRepository { maven("https://api.modrinth.com/maven") { name = "Modrinth" } }
+		filter { includeGroup("maven.modrinth") }
+	}
 	maven("https://maven.shedaniel.me/") { name = "Shedaniel" }
 	maven("https://maven.minecraftforge.net/") { name = "MinecraftForge" }
 	maven("https://maven.neoforged.net/releases/") { name = "NeoForged" }
@@ -73,7 +82,14 @@ dependencies {
 			modImplementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
 			modImplementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
 
-			modImplementation("com.terraformersmc:modmenu:${property("deps.modmenu")}")
+			// Mod Menu: tiers with deps.modmenu_from_modrinth = true pull the jar
+			// from the Modrinth maven (version numbers verified identical there)
+			// because the TerraformersMC maven 400'd on those artifacts in CI.
+			if (findProperty("deps.modmenu_from_modrinth") == "true") {
+				modImplementation("maven.modrinth:modmenu:${property("deps.modmenu")}")
+			} else {
+				modImplementation("com.terraformersmc:modmenu:${property("deps.modmenu")}")
+			}
 			modImplementation("me.shedaniel.cloth:cloth-config-fabric:${property("deps.cloth_config")}") {
 				exclude(group = "net.fabricmc.fabric-api")
 			}
