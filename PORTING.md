@@ -284,7 +284,7 @@ for both loaders.
 ### Build architecture
 
 - **Loader axis in Stonecutter.** `settings.gradle.kts` registers the new
-  targets as `vers("<mc>-forge" / "<mc>-neoforge", "<mc>")`, so the
+  targets as `version("<mc>-forge" / "<mc>-neoforge", "<mc>")`, so the
   preprocessor still sees a plain Minecraft version (every existing `//? if
   >=x.y` gate keeps working), while `stonecutter.gradle.kts` registers
   `fabric` / `forge` / `neoforge` **constants** from the target-name suffix

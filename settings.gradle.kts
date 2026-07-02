@@ -60,7 +60,7 @@ stonecutter {
 		)
 
 		// ---- Forge (1.16.5 - 1.20.1) --------------------------------------
-		// vers(name, version): the project is named "<mc>-forge" but the
+		// version(name, version): the project is named "<mc>-forge" but the
 		// preprocessor still sees the plain Minecraft version, so every //? if
 		// version gate keeps working; the loader is exposed as the constants
 		// fabric/forge/neoforge (see stonecutter.gradle.kts).
@@ -68,22 +68,22 @@ stonecutter {
 		// diverged from Forge (package rename net.minecraftforge -> 
 		// net.neoforged) at Minecraft 1.20.2, so no separate 1.20.1-neoforge
 		// target is needed.
-		vers("1.16.5-forge", "1.16.5")
-		vers("1.17.1-forge", "1.17.1")
-		vers("1.18.2-forge", "1.18.2")
-		vers("1.19.2-forge", "1.19.2")
-		vers("1.19.4-forge", "1.19.4")
-		vers("1.20.1-forge", "1.20.1")
+		version("1.16.5-forge", "1.16.5")
+		version("1.17.1-forge", "1.17.1")
+		version("1.18.2-forge", "1.18.2")
+		version("1.19.2-forge", "1.19.2")
+		version("1.19.4-forge", "1.19.4")
+		version("1.20.1-forge", "1.20.1")
 
 		// ---- NeoForge (1.20.4 - 26.2; 1.20.1 is covered by the Forge jar) --
-		vers("1.20.4-neoforge", "1.20.4")
-		vers("1.20.6-neoforge", "1.20.6")
-		vers("1.21.1-neoforge", "1.21.1")
-		vers("1.21.4-neoforge", "1.21.4")
-		vers("1.21.5-neoforge", "1.21.5")
-		vers("1.21.8-neoforge", "1.21.8")
-		vers("26.1.2-neoforge", "26.1.2")
-		vers("26.2-neoforge", "26.2")
+		version("1.20.4-neoforge", "1.20.4")
+		version("1.20.6-neoforge", "1.20.6")
+		version("1.21.1-neoforge", "1.21.1")
+		version("1.21.4-neoforge", "1.21.4")
+		version("1.21.5-neoforge", "1.21.5")
+		version("1.21.8-neoforge", "1.21.8")
+		version("26.1.2-neoforge", "26.1.2")
+		version("26.2-neoforge", "26.2")
 
 		vcsVersion = "26.2"
 	}
