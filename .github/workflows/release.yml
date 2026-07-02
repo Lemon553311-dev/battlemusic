@@ -9,10 +9,11 @@ on:
     inputs:
       publish_test:
         description: >-
-          Also run the Modrinth publish step on every target, in dry-run mode
-          (MODRINTH_DRY_RUN=true - validates the token/project/config and
+          Also run the Modrinth and CurseForge publish steps on every target,
+          in dry-run mode (MODRINTH_DRY_RUN / CURSEFORGE_DRY_RUN = true -
+          validates the tokens/projects/config and
           prints what would be uploaded, without actually uploading anything).
-          Use this to verify Modrinth publishing works before cutting a real
+          Use this to verify publishing works before cutting a real
           v* tag release.
         type: boolean
         default: false
@@ -119,6 +120,18 @@ jobs:
           MOD_VERSION: ${{ github.ref_name }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
           MODRINTH_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_test && 'true' || '' }}
+
+      # Mirror of the Modrinth step above: same v*-tag / publish_test dry-run
+      # gating. Needs the CURSEFORGE_TOKEN repo secret (an API token from
+      # https://authors.curseforge.com/account/api-tokens) and the numeric
+      # mod.curseforge_id in stonecutter.properties.toml.
+      - name: Publish ${{ matrix.target }} to CurseForge
+        if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish_test)
+        run: ./gradlew ":${{ matrix.target }}:publishCurseforge" --configure-on-demand --no-daemon --stacktrace
+        env:
+          MOD_VERSION: ${{ github.ref_name }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          CURSEFORGE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_test && 'true' || '' }}
 
   # Runs once, after every matrix job finishes, purely to assemble the GitHub
   # Release from jars that are already built - no rebuilding here. Only on a

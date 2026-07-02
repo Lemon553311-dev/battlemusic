@@ -19,6 +19,7 @@
 plugins {
 	id("net.neoforged.moddev")
 	id("com.modrinth.minotaur")
+	id("net.darkhax.curseforgegradle")
 }
 
 val mcVersion: String = project.name.substringBeforeLast("-neoforge") // "26.1.2" or "26.2"
@@ -129,4 +130,37 @@ modrinth {
 
 	debugMode.set(System.getenv("MODRINTH_DRY_RUN") == "true")
 	changelog.set(System.getenv("CHANGELOG") ?: "See the GitHub release for changes.")
+}
+
+// Mirror of the modrinth block above, for CurseForge. See build.gradle.kts for
+// the full commentary. This variant uses the plain `jar` output (ModDevGradle
+// has no remapJar) and is always NeoForge.
+tasks.register<net.darkhax.curseforgegradle.TaskPublishCurseForge>("publishCurseforge") {
+	group = "publishing"
+	description = "Uploads this version's jar to CurseForge."
+	dependsOn(tasks.jar)
+
+	apiToken = System.getenv("CURSEFORGE_TOKEN") ?: ""
+	debugMode = System.getenv("CURSEFORGE_DRY_RUN") == "true"
+	disableVersionDetection()
+
+	val mainFile = upload(
+		property("mod.curseforge_id") as String,
+		tasks.jar.flatMap { it.archiveFile }
+	)
+	mainFile.displayName = "Battle Music $modVersion ($mcVersion, neoforge)"
+	mainFile.releaseType = "release"
+	mainFile.changelogType = "markdown"
+	mainFile.changelog = System.getenv("CHANGELOG") ?: "See the GitHub release for changes."
+
+	(property("mod.mc_releases") as String).split(",").map { it.trim() }
+		.forEach { mainFile.addGameVersion(it) }
+	mainFile.addModLoader("NeoForge")
+	// Required on all new Minecraft files from 2026-07-15; this mod is client-only.
+	mainFile.addEnvironment("Client")
+	// No Java tag: "Java 25" could not be confirmed in CurseForge's tag list
+	// at the time of writing (an unknown tag fails upload validation). Add
+	// mainFile.addJavaVersion("Java 25") once confirmed.
+
+	mainFile.addOptional("cloth-config")
 }

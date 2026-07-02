@@ -13,6 +13,10 @@ pluginManagement {
 		// Pin the Modrinth publishing plugin version centrally; build.gradle.kts
 		// applies it without a version (avoids multi-project version clashes).
 		id("com.modrinth.minotaur") version "2.+"
+		// CurseForge publishing plugin (Darkhax's CurseForgeGradle), pinned
+		// centrally for the same reason. Task-based: each build script registers
+		// a `publishCurseforge` task mirroring its `modrinth` task.
+		id("net.darkhax.curseforgegradle") version "1.3.32"
 		// Architectury Loom builds Fabric (<26.1, obfuscated), Forge, AND
 		// NeoForge targets from the same build script (the platform comes from
 		// each version subproject's loom.platform gradle property; see

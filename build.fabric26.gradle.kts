@@ -18,6 +18,7 @@
 plugins {
 	id("net.fabricmc.fabric-loom")
 	id("com.modrinth.minotaur")
+	id("net.darkhax.curseforgegradle")
 }
 
 val mcVersion: String = project.name.substringBeforeLast("-fabric") // "26.1.2" or "26.2"
@@ -88,6 +89,9 @@ tasks {
 			// 26.1+ removed the pre-1.19.3 "fabric" alias entirely; only
 			// "fabric-api" is valid here (see stonecutter.properties.toml).
 			"fabric_api_id" to "fabric-api",
+			// Fabric API runtime range; "*" on these tiers (only 1.16.5 needs a
+			// real floor - see stonecutter.properties.toml).
+			"fabric_api_compat" to (project.findProperty("mod.fabric_api_compat") ?: "*"),
 		)
 		props.forEach { (key, value) -> inputs.property(key, value) }
 		filesMatching("fabric.mod.json") { expand(props) }
@@ -139,4 +143,39 @@ modrinth {
 
 	debugMode.set(System.getenv("MODRINTH_DRY_RUN") == "true")
 	changelog.set(System.getenv("CHANGELOG") ?: "See the GitHub release for changes.")
+}
+
+// Mirror of the modrinth block above, for CurseForge. See build.gradle.kts for
+// the full commentary. This variant uses the plain `jar` output (non-obf Loom
+// has no remapJar) and is always Fabric.
+tasks.register<net.darkhax.curseforgegradle.TaskPublishCurseForge>("publishCurseforge") {
+	group = "publishing"
+	description = "Uploads this version's jar to CurseForge."
+	dependsOn(tasks.jar)
+
+	apiToken = System.getenv("CURSEFORGE_TOKEN") ?: ""
+	debugMode = System.getenv("CURSEFORGE_DRY_RUN") == "true"
+	disableVersionDetection()
+
+	val mainFile = upload(
+		property("mod.curseforge_id") as String,
+		tasks.jar.flatMap { it.archiveFile }
+	)
+	mainFile.displayName = "Battle Music $modVersion ($mcVersion, fabric)"
+	mainFile.releaseType = "release"
+	mainFile.changelogType = "markdown"
+	mainFile.changelog = System.getenv("CHANGELOG") ?: "See the GitHub release for changes."
+
+	(property("mod.mc_releases") as String).split(",").map { it.trim() }
+		.forEach { mainFile.addGameVersion(it) }
+	mainFile.addModLoader("Fabric")
+	// Required on all new Minecraft files from 2026-07-15; this mod is client-only.
+	mainFile.addEnvironment("Client")
+	// No Java tag: "Java 25" could not be confirmed in CurseForge's tag list
+	// at the time of writing (an unknown tag fails upload validation). Add
+	// mainFile.addJavaVersion("Java 25") once confirmed.
+
+	mainFile.addRequirement("fabric-api")
+	mainFile.addOptional("modmenu")
+	mainFile.addOptional("cloth-config")
 }

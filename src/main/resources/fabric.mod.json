@@ -31,7 +31,7 @@
 		"fabricloader": "${loader}",
 		"minecraft": "${minecraft}",
 		"java": "${java}",
-		"${fabric_api_id}": "*"
+		"${fabric_api_id}": "${fabric_api_compat}"
 	},
 
 	"suggests": {

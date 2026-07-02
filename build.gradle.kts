@@ -23,6 +23,8 @@ plugins {
 	id("dev.architectury.loom")
 	// Publishes each version's jar to Modrinth via the `modrinth` task.
 	id("com.modrinth.minotaur")
+	// Publishes each version's jar to CurseForge via the `publishCurseforge` task.
+	id("net.darkhax.curseforgegradle")
 }
 
 // ---- Target coordinates ---------------------------------------------------
@@ -145,6 +147,10 @@ tasks {
 			// Fabric API's mod id is version-dependent ("fabric" pre-1.19.3,
 			// "fabric-api" from 1.19.3 on); pinned per tier as mod.fabric_api_id.
 			"fabric_api_id" to (project.findProperty("mod.fabric_api_id") ?: "fabric-api"),
+			// Fabric API runtime range for fabric.mod.json's depends block. "*"
+			// (any version) everywhere except 1.16.5, which needs a real floor -
+			// see stonecutter.properties.toml.
+			"fabric_api_compat" to (project.findProperty("mod.fabric_api_compat") ?: "*"),
 			// ---- Forge / NeoForge metadata (blank on Fabric tiers) ----
 			"fml_range" to (project.findProperty("mod.fml_range") ?: ""),
 			"loader_dep_id" to (if (loader == "neoforge") "neoforge" else "forge"),
@@ -245,4 +251,75 @@ modrinth {
 	// Set MODRINTH_DRY_RUN=true to validate everything WITHOUT uploading.
 	debugMode.set(System.getenv("MODRINTH_DRY_RUN") == "true")
 	changelog.set(System.getenv("CHANGELOG") ?: "See the GitHub release for changes.")
+}
+
+// ---------------------------------------------------------------------------
+// CurseForge publishing (Darkhax CurseForgeGradle).
+// Mirror of the Modrinth block above: same jar, same game versions, same
+// loader tagging (1.20.1 Forge doubles as NeoForge 1.20.1), same dependency
+// projects (CurseForge identifies them by slug).
+//
+// Needed to actually upload (set by release.yml on a v* tag):
+//   CURSEFORGE_TOKEN - API token from https://authors.curseforge.com/account/api-tokens
+//   MOD_VERSION      - e.g. 1.3.0, taken from the git tag
+// The target project is mod.curseforge_id in stonecutter.properties.toml: the
+// NUMERIC id from the "About Project" box on the project page, not the slug.
+// Set CURSEFORGE_DRY_RUN=true to log the upload request instead of sending it.
+// ---------------------------------------------------------------------------
+tasks.register<net.darkhax.curseforgegradle.TaskPublishCurseForge>("publishCurseforge") {
+	group = "publishing"
+	description = "Uploads this version's jar to CurseForge."
+	dependsOn(tasks.remapJar)
+
+	apiToken = System.getenv("CURSEFORGE_TOKEN") ?: ""
+	debugMode = System.getenv("CURSEFORGE_DRY_RUN") == "true"
+
+	// Everything below is declared explicitly; auto-detection would only see
+	// the buildtime Minecraft version, not the full supported range.
+	disableVersionDetection()
+
+	val mainFile = upload(
+		property("mod.curseforge_id") as String,
+		tasks.remapJar.flatMap { it.archiveFile }
+	)
+	mainFile.displayName = "Battle Music $modVersion ($mcVersion, $loader)"
+	mainFile.releaseType = "release"
+	mainFile.changelogType = "markdown"
+	mainFile.changelog = System.getenv("CHANGELOG") ?: "See the GitHub release for changes."
+
+	// Same game-version tags as Modrinth. CurseForge uses the same version
+	// names for both the 1.x and the new 26.x scheme (verified via their
+	// site's version filters).
+	(property("mod.mc_releases") as String).split(",").map { it.trim() }
+		.forEach { mainFile.addGameVersion(it) }
+
+	when (loader) {
+		"fabric" -> mainFile.addModLoader("Fabric")
+		"forge" -> {
+			mainFile.addModLoader("Forge")
+			// The 1.20.1 Forge jar also runs on NeoForge 1.20.1 (same tagging
+			// as the Modrinth block above).
+			if (mcVersion == "1.20.1") mainFile.addModLoader("NeoForge")
+		}
+		"neoforge" -> mainFile.addModLoader("NeoForge")
+	}
+
+	// CurseForge requires an environment tag on all new Minecraft files from
+	// 2026-07-15 onward; this mod is client-only.
+	mainFile.addEnvironment("Client")
+
+	// Java tag, only for majors confirmed to exist in CurseForge's tag list
+	// (an unknown tag fails upload validation; run the publish_test dry run
+	// after adding new ones).
+	val javaMajor = (property("mod.java_compat") as String).removePrefix(">=").trim()
+	if (javaMajor in listOf("8", "16", "17", "21")) {
+		mainFile.addJavaVersion("Java $javaMajor")
+	}
+
+	// Dependencies by CurseForge slug (same projects as on Modrinth).
+	if (loader == "fabric") {
+		mainFile.addRequirement("fabric-api")
+		mainFile.addOptional("modmenu")
+	}
+	mainFile.addOptional("cloth-config")
 }

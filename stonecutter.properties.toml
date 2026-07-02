@@ -23,6 +23,14 @@ mod.group = "me.lemon553311.battlemusic"
 mod.version = "1.2.0"
 # Modrinth project to publish to (the slug from your project URL, or its ID).
 mod.modrinth_id = "battle-music"
+mod.curseforge_id = "1595905"
+
+# Fabric API version range for fabric.mod.json's depends block. Kept at "*"
+# (any version) so older modpacks running older Fabric API builds are not
+# locked out - every Fabric API release for 1.17+ already contains all the
+# modules this mod uses (lifecycle events v1, networking api v1, rendering
+# v1). Only 1.16.5 needs a real floor; it overrides this in its own section.
+mod.fabric_api_compat = "*"
 
 # Fabric API's mod id is version-dependent and is NOT checked by the compiler,
 # so it must be pinned per tier or the mod refuses to launch even when Fabric
@@ -48,6 +56,11 @@ mod.mc_releases = "1.16,1.16.1,1.16.2,1.16.3,1.16.4,1.16.5"
 mod.java_compat = ">=8"
 deps.fabric_api = "0.42.0+1.16"
 mod.fabric_api_id = "fabric"         # pre-1.19.3: Fabric API's mod id is "fabric", not "fabric-api"
+# Runtime floor: ClientPlayConnectionEvents (networking api v1) first shipped
+# in Fabric API 0.30.0 for 1.16.5 (Jan 2021, verified on Modrinth/CurseForge).
+# Older API builds are missing the class and would crash this mod on init, so
+# they must be rejected up front with a clear "update Fabric API" screen.
+mod.fabric_api_compat = ">=0.30.0"
 deps.modmenu = "1.16.23"
 deps.cloth_config = "4.16.91"        # confirmed on Modrinth
 
