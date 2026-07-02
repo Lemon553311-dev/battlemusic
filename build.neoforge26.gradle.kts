@@ -79,15 +79,13 @@ tasks {
 		group = "build"
 		description = "Builds the mod and collects jars into build/libs/<mod version>/"
 		// ModDevGradle does not remap; the plain `jar` task is the final
-		// artifact. Referenced via tasks.named<Jar>(...) with the fully-
-		// qualified type (core Gradle API, not plugin-specific sugar) rather
-		// than a bare "jar"/"sourcesJar" identifier - the bare "sourcesJar"
-		// identifier did not resolve here in a real CI run (round 8g), even
-		// though bare "jar" did.
-		from(
-			tasks.named<org.gradle.api.tasks.bundling.Jar>("jar").flatMap { it.archiveFile },
-			tasks.named<org.gradle.api.tasks.bundling.Jar>("sourcesJar").flatMap { it.archiveFile },
-		)
+		// artifact. `jar` gets a compile-time accessor (registered
+		// unconditionally by the java plugin); `sourcesJar` is created later
+		// by withSourcesJar() so it never gets one and must be looked up by
+		// name via tasks.named("sourcesJar") - a general Gradle fact, not
+		// specific to this plugin. Copy.from() accepts a bare Task/
+		// TaskProvider directly and resolves its output files itself.
+		from(tasks.jar, tasks.named("sourcesJar"))
 		into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
 		dependsOn("build")
 	}
@@ -101,7 +99,10 @@ modrinth {
 	versionName.set("Battle Music $modVersion ($mcVersion, neoforge)")
 	versionType.set("release")
 
-	uploadFile.set(tasks.named<org.gradle.api.tasks.bundling.Jar>("jar").flatMap { it.archiveFile })
+	// Minotaur's own README shows exactly this form (uploadFile.set(tasks.jar)),
+	// warning only that Fabric/Forge Loom (remapping loaders) must use
+	// remapJar instead - ModDevGradle has no remapJar, so plain jar is right.
+	uploadFile.set(tasks.jar)
 
 	gameVersions.set(
 		(property("mod.mc_releases") as String).split(",").map { it.trim() }

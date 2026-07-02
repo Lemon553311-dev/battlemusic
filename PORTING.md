@@ -582,6 +582,46 @@ neoforge/fabric loader branches already existed from the original port).
    version; removed/replaced later by `IConfigScreenFactory`).
 4. `clientSideOnly=true` placement in `neoforge.mods.toml`.
 
+## Round 8h - jar/sourcesJar references, done with evidence instead of guessing
+
+Round 8g fixed `modImplementation` correctly (confirmed: non-obf Fabric Loom
+has no remapping machinery, so only plain `implementation` exists), but its
+replacement for the `remapJar`/`remapSourcesJar` references
+(`tasks.named<org.gradle.api.tasks.bundling.Jar>("jar")`, a generic/reified
+call) failed too, with Kotlin resolving it against the wrong overload set
+entirely (`named(String, KClass<S>)` Java-interop bridges, not the intended
+Gradle Kotlin DSL sugar).
+
+Instead of a third guess, this round looked up real, currently-maintained
+reference code instead of reasoning from error messages alone:
+
+- **Minotaur's own README** (`modrinth/minotaur`) shows the canonical form
+  directly: `uploadFile.set(tasks.jar)` - a bare task reference, no
+  `.archiveFile`, no cast, no generics - with an explicit note that only
+  Loom-based (remapping) loaders need `remapJar` instead of `jar`.
+- **`rotgruengelb/stonecutter-mod-template`'s** real, currently-working
+  `build.fabric-m.gradle.kts` / `build.neoforge.gradle.kts` (mainline Fabric
+  Loom non-obf / ModDevGradle, the same two plugins this project uses for
+  26.1+) confirm `implementation(...)` for fabric-loader/fabric-api and
+  contain no custom jar-collection logic at all - further confirming
+  `modImplementation` and `remapJar` are specific to remapping loaders only.
+
+This also explains why `jar` and `sourcesJar` behave differently: `jar` is
+registered unconditionally by the `java` plugin before any script body runs,
+so Gradle can generate a compile-time accessor for it (`tasks.jar` just
+works). `sourcesJar` is created later, dynamically, by `withSourcesJar()` -
+too late for accessor generation - so it can only ever be referenced by name
+via `tasks.named("sourcesJar")`. This is a general Gradle behavior, not
+specific to Stonecutter or either of these two plugins, and explains the
+exact shape of every one of this round's failures without needing to guess
+again.
+
+**Fix:** both `build.fabric26.gradle.kts` and `build.neoforge26.gradle.kts`
+now use `from(tasks.jar, tasks.named("sourcesJar"))` for `buildAndCollect`
+(Copy's `from()` accepts a bare Task/TaskProvider and resolves its output
+files itself - no `.archiveFile` needed) and `uploadFile.set(tasks.jar)` for
+Modrinth, matching Minotaur's own documented usage exactly.
+
 Everything else follows the same pattern as rounds 3-7: if a tier fails to
 compile, the CI log will name the exact symbol, and the fix is a one-line gate
 adjustment in the affected file.

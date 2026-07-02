@@ -100,14 +100,14 @@ tasks {
 		description = "Builds the mod and collects jars into build/libs/<mod version>/"
 		// No remapJar in non-obf mode either (see the dependencies comment
 		// above) - the plain jar/sourcesJar tasks are the final artifacts.
-		// Referenced via tasks.named<Jar>(...) with the fully-qualified type
-		// (core Gradle API, not plugin-specific sugar) rather than a bare
-		// "jar"/"sourcesJar" identifier, since this file has now twice hit
-		// cases where an expected bare accessor did not resolve.
-		from(
-			tasks.named<org.gradle.api.tasks.bundling.Jar>("jar").flatMap { it.archiveFile },
-			tasks.named<org.gradle.api.tasks.bundling.Jar>("sourcesJar").flatMap { it.archiveFile },
-		)
+		// `jar` gets a compile-time accessor (registered unconditionally by
+		// the java plugin); `sourcesJar` is created later by withSourcesJar()
+		// so it never gets one and must be looked up by name via
+		// tasks.named("sourcesJar") - this is a general Gradle fact, not
+		// specific to this plugin, confirmed against Copy.from()'s own
+		// documented ability to accept a bare Task/TaskProvider directly
+		// (see also Minotaur's own README for uploadFile below).
+		from(tasks.jar, tasks.named("sourcesJar"))
 		into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
 		dependsOn("build")
 	}
@@ -121,7 +121,10 @@ modrinth {
 	versionName.set("Battle Music $modVersion ($mcVersion, fabric)")
 	versionType.set("release")
 
-	uploadFile.set(tasks.named<org.gradle.api.tasks.bundling.Jar>("jar").flatMap { it.archiveFile })
+	// Minotaur's own README shows exactly this form (uploadFile.set(tasks.jar)),
+	// warning only that Fabric/Forge Loom (remapping loaders) must use
+	// remapJar instead - non-obf Loom has no remapJar, so plain jar is right.
+	uploadFile.set(tasks.jar)
 
 	gameVersions.set(
 		(property("mod.mc_releases") as String).split(",").map { it.trim() }
