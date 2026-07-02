@@ -266,7 +266,13 @@ public final class LastHeartFeature {
 		return ResourceLocation.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
 	}
 	//?} else {
-	/*private static ResourceLocation mkId(String path) {
+	/*// The 2-arg ResourceLocation constructor is deprecated-for-removal on
+	// newer Minecraft, but it is the only option pre-1.21 (fromNamespaceAndPath
+	// does not exist yet there) - suppressed rather than left as noise, since
+	// these pre-1.21 tiers are pinned and will never see this code updated out
+	// from under them.
+	@SuppressWarnings({"deprecation", "removal"})
+	private static ResourceLocation mkId(String path) {
 		return new ResourceLocation(BattleMusicClient.MOD_ID, path);
 	}
 	*///?}

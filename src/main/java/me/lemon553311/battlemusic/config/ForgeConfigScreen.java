@@ -30,7 +30,12 @@ import net.minecraftforge.fml.ModLoadingContext;
 *///?}
 
 //? if forge {
-/*public final class ForgeConfigScreen {
+/*// ModLoadingContext.get() is marked deprecated-for-removal on newer Forge,
+// but it is the only available API on the old, exactly-pinned Forge versions
+// this file targets (1.16.5-1.20.1), which will never be bumped forward -
+// suppressed rather than left as noise.
+@SuppressWarnings({"deprecation", "removal"})
+public final class ForgeConfigScreen {
 
 	private ForgeConfigScreen() {}
 

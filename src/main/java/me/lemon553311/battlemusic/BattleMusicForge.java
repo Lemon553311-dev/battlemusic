@@ -43,6 +43,11 @@ import org.apache.commons.lang3.tuple.Pair;
 
 //? if forge {
 /*@Mod(BattleMusicClient.MOD_ID)
+// ModLoadingContext.get() and FMLJavaModLoadingContext.get() are marked
+// deprecated-for-removal on newer Forge, but they are the only available APIs
+// on the old, exactly-pinned Forge versions this file targets (1.16.5-1.20.1),
+// which will never be bumped forward - suppressed rather than left as noise.
+@SuppressWarnings({"deprecation", "removal"})
 public final class BattleMusicForge {
 
 	public BattleMusicForge() {
