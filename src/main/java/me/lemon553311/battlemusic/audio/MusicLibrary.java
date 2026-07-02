@@ -10,6 +10,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
@@ -43,6 +45,29 @@ public class MusicLibrary {
 	private long lastRegularMtime = 0L;
 	private long lastHeavyMtime = 0L;
 
+	// Files STB Vorbis failed to open/decode this session (e.g. Ogg OPUS rips or
+	// corrupt downloads). Without this, a broken track could be re-picked, spawn a
+	// playback thread and fail again EVERY TICK when it was the only track in its
+	// folder, spamming the log 20x/second. Static so both channels and every
+	// picker see the same set; cleared on rescan so a fixed/replaced file gets
+	// retried once the folder changes.
+	private static final Set<String> UNPLAYABLE = ConcurrentHashMap.newKeySet();
+
+	/** Mark a file as undecodable for this session. Returns true only the first time. */
+	public static boolean markUnplayable(Path p) {
+		return p != null && UNPLAYABLE.add(p.toAbsolutePath().toString());
+	}
+
+	public static boolean isPlayable(Path p) {
+		return p != null && !UNPLAYABLE.contains(p.toAbsolutePath().toString());
+	}
+
+	private static List<Path> playable(List<Path> list) {
+		List<Path> out = new ArrayList<>(list.size());
+		for (Path p : list) if (isPlayable(p)) out.add(p);
+		return out;
+	}
+
 	public MusicLibrary(Path root) {
 		this.root = root;
 	}
@@ -59,7 +84,12 @@ public class MusicLibrary {
 			if (!Files.exists(readme)) {
 				Files.write(readme,
 						("Drop .ogg files into 'Regular Battle' and 'Heavy Battle'.\n"
-								+ "The song will be picked at random if there's multiple files.").getBytes(StandardCharsets.UTF_8));
+								+ "The song will be picked at random if there's multiple files.\n"
+								+ "\n"
+								+ "IMPORTANT: files must be Ogg VORBIS. Many .ogg files from YouTube\n"
+								+ "rippers / online converters are actually Ogg OPUS and will not play\n"
+								+ "(the game log will tell you when that happens). Convert with:\n"
+								+ "  ffmpeg -i \"input.ogg\" -c:a libvorbis \"output.ogg\"").getBytes(StandardCharsets.UTF_8));
 			}
 		} catch (IOException e) {
 			BattleMusicClient.LOGGER.warn("Could not create music folders", e);
@@ -68,6 +98,9 @@ public class MusicLibrary {
 
 	// Re-read both folders from disk. Updates the cached mtimes so a follow-up rescanIfChanged() is a no-op until the folders change again.
 	public synchronized void rescan() {
+		// Folder contents changed: forget decode failures so replaced/re-encoded
+		// files get another chance.
+		UNPLAYABLE.clear();
 		regular.clear();
 		heavy.clear();
 		regular.addAll(listOgg(root.resolve(REGULAR_DIR)));
@@ -96,10 +129,10 @@ public class MusicLibrary {
 	}
 
 	public synchronized boolean hasRegular() {
-		return !regular.isEmpty();
+		return !playable(regular).isEmpty();
 	}
 	public synchronized boolean hasHeavy() {
-		return !heavy.isEmpty();
+		return !playable(heavy).isEmpty();
 	}
 	public synchronized int regularCount() {
 		return regular.size();
@@ -186,27 +219,29 @@ public class MusicLibrary {
 	}
 
 	public synchronized Path pickRegular() {
-		lastRegular = pickWeighted(regular, lastRegular);
+		lastRegular = pickWeighted(playable(regular), lastRegular);
 		BattleMusicClient.debug("Picked regular track: {}", lastRegular == null ? "<none>" : lastRegular.getFileName());
 		return lastRegular;
 	}
 
 	public synchronized Path pickHeavy() {
-		lastHeavy = pickWeighted(heavy, lastHeavy);
+		lastHeavy = pickWeighted(playable(heavy), lastHeavy);
 		BattleMusicClient.debug("Picked heavy track: {}", lastHeavy == null ? "<none>" : lastHeavy.getFileName());
 		return lastHeavy;
 	}
 
 	// Picks a track from the union of both folders (used by the PvP trigger when its pool is BOTH).
 	public synchronized Path pickBoth() {
-		if (regular.isEmpty() && heavy.isEmpty()) return null;
+		List<Path> reg = playable(regular);
+		List<Path> hvy = playable(heavy);
+		if (reg.isEmpty() && hvy.isEmpty()) return null;
 		List<Path> union;
-		if (regular.isEmpty()) union = heavy;
-		else if (heavy.isEmpty()) union = regular;
+		if (reg.isEmpty()) union = hvy;
+		else if (hvy.isEmpty()) union = reg;
 		else {
-			union = new ArrayList<>(regular.size() + heavy.size());
-			union.addAll(regular);
-			union.addAll(heavy);
+			union = new ArrayList<>(reg.size() + hvy.size());
+			union.addAll(reg);
+			union.addAll(hvy);
 		}
 		lastBoth = pickWeighted(union, lastBoth);
 		BattleMusicClient.debug("Picked track (PvP both-pool): {}", lastBoth == null ? "<none>" : lastBoth.getFileName());

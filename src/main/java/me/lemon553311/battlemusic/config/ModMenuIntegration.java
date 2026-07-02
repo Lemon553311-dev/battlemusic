@@ -13,10 +13,22 @@ package me.lemon553311.battlemusic.config;
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
 
+import net.fabricmc.loader.api.FabricLoader;
+
 public class ModMenuIntegration implements ModMenuApi {
 
 	@Override
 	public ConfigScreenFactory<?> getModConfigScreenFactory() {
+		// Cloth Config is optional. Without this guard, running ModMenu WITHOUT
+		// Cloth Config crashed with a NoClassDefFoundError the moment the mod's
+		// Configure button was clicked (ClothConfigScreen references Cloth Config
+		// classes). Forge/NeoForge already had the equivalent guard in
+		// ForgeConfigScreen / NeoForgeConfigScreen.
+		// NOTE: the Fabric mod id is "cloth-config2" ("cloth_config" is the
+		// Forge/NeoForge id checked by the other two loaders).
+		if (!FabricLoader.getInstance().isModLoaded("cloth-config2")) {
+			return screen -> null; // same as the ModMenuApi default: no config screen
+		}
 		return ClothConfigScreen::build;
 	}
 }

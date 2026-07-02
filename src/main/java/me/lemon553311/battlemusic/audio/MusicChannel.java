@@ -10,6 +10,7 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.SourceDataLine;
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 import java.nio.file.Files;
@@ -93,6 +94,10 @@ public class MusicChannel {
 			BattleMusicClient.LOGGER.warn("[{}] cannot read {}", name, oggPath);
 			return false;
 
+		}
+		if (!MusicLibrary.isPlayable(oggPath)) {
+			BattleMusicClient.debug("[{}] skipping {} (failed to decode earlier this session)", name, oggPath.getFileName());
+			return false;
 		}
 
 		stopThread();
@@ -212,13 +217,27 @@ public class MusicChannel {
 		long decoder = NULL;
 		SourceDataLine line = null;
 		ShortBuffer pcm = null;
+		ByteBuffer encoded = null;
 
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			IntBuffer error = stack.mallocInt(1);
-			decoder = stb_vorbis_open_filename(path.toAbsolutePath().toString(), error, null);
+			// Read the file in Java and decode from memory instead of using
+			// stb_vorbis_open_filename: LWJGL hands stb the path as UTF-8 bytes,
+			// but stb opens it with C fopen(), which on Windows expects the legacy
+			// ANSI codepage. Any non-ASCII track name (Cyrillic, diacritics, CJK,
+			// emoji) - or a non-ASCII Windows user name anywhere in the path -
+			// failed to open and the battle stayed silent. Reading through
+			// java.nio sidesteps the OS path layer entirely. (Vanilla decodes Ogg
+			// from streams for the same reason.)
+			byte[] fileBytes = Files.readAllBytes(path);
+			encoded = MemoryUtil.memAlloc(fileBytes.length);
+			encoded.put(fileBytes);
+			encoded.flip();
+			decoder = stb_vorbis_open_memory(encoded, error, null);
 
 			if (decoder == NULL) {
 				BattleMusicClient.LOGGER.warn("[{}] STB open failed for {} (err {})", name, path, error.get(0));
+				warnUnplayable(path, fileBytes);
 				return;
 			}
 
@@ -234,7 +253,8 @@ public class MusicChannel {
 			}
 
 			if (channels < 1 || channels > 2) {
-				BattleMusicClient.LOGGER.warn("[{}] unsupported channel count {} in {}", name, channels, path);
+				BattleMusicClient.LOGGER.warn("[{}] unsupported channel count {} in {} (only mono/stereo Ogg Vorbis is supported)", name, channels, path);
+				MusicLibrary.markUnplayable(path);
 				return;
 			}
 
@@ -260,27 +280,44 @@ public class MusicChannel {
 			AudioFormat format = new AudioFormat(sampleRate, 16, channels, true, false); // signed, little-endian
 			DataLine.Info dlInfo = new DataLine.Info(SourceDataLine.class, format);
 			line = (SourceDataLine) AudioSystem.getLine(dlInfo);
-			line.open(format);
+			// Explicit small line buffer (2 decode chunks, ~0.19s at 44.1 kHz).
+			// The implementation default is often ~0.5s or more, and since gain is
+			// baked into the samples at write time, fades / the volume slider
+			// lagged behind by the whole buffer (and the resume position ran ahead
+			// of what was audible). Two chunks keeps fades snappy while leaving a
+			// full chunk of slack against dropouts.
+			line.open(format, SAMPLES_PER_CHUNK * channels * 2 * 2);
 			line.start();
 			BattleMusicClient.debug("[{}] playing {} @ {} Hz, {} ch", name, path.getFileName(), sampleRate, channels);
 
 			pcm = MemoryUtil.memAllocShort(SAMPLES_PER_CHUNK * channels);
 			byte[] bytes = new byte[SAMPLES_PER_CHUNK * channels * 2];
+			boolean justLooped = false;
 
 			while (alive.get() && !Thread.currentThread().isInterrupted()) {
 				pcm.clear();
 				int n = stb_vorbis_get_samples_short_interleaved(decoder, channels, pcm);
 
 				if (n <= 0) {
-					if (loop) {
+					if (loop && !justLooped) {
 						BattleMusicClient.debug("[{}] looping {}", name, path.getFileName());
 						stb_vorbis_seek_start(decoder);
 						playbackFrame = 0L;
+						justLooped = true;
 						continue;
 					}
-					BattleMusicClient.debug("[{}] reached end of {}", name, path.getFileName());
+					if (loop) {
+						// The track was just restarted and still produced nothing:
+						// broken file. Bail out instead of spinning this thread at
+						// 100% CPU on seek_start/read forever.
+						BattleMusicClient.LOGGER.warn("[{}] {} produced no samples after a loop restart; stopping playback", name, path.getFileName());
+						MusicLibrary.markUnplayable(path);
+					} else {
+						BattleMusicClient.debug("[{}] reached end of {}", name, path.getFileName());
+					}
 					break;
 				}
+				justLooped = false;
 
 				playbackFrame = stb_vorbis_get_sample_offset(decoder);
 				int sampleCount = n * channels;
@@ -309,11 +346,51 @@ public class MusicChannel {
 			if (decoder != NULL) {
 				try { stb_vorbis_close(decoder); } catch (Throwable ignored) {}
 			}
+			if (encoded != null) {
+				// Freed only after the decoder is closed: stb reads from this
+				// buffer for the decoder's whole lifetime.
+				try { MemoryUtil.memFree(encoded); } catch (Throwable ignored) {}
+			}
 			// Only the still-current playback may clear shared status, so a stale
 			// thread finishing never clobbers a freshly started one
 			if (activeFlag == alive) {
 				running = false;
 			}
 		}
+	}
+
+	// Decode-failure diagnostics, written to the game log (console + latest.log).
+	// The #1 real-world cause is an "Ogg" file that is actually Ogg OPUS (YouTube
+	// rippers and online converters commonly produce these), which STB Vorbis
+	// cannot decode. Reported once per file per session; the blacklist in
+	// MusicLibrary also keeps the picker off the file, so a broken track can't be
+	// re-rolled and re-fail every tick.
+	private void warnUnplayable(Path path, byte[] fileBytes) {
+		if (!MusicLibrary.markUnplayable(path)) return; // already reported this session
+		if (looksLikeOpus(fileBytes)) {
+			BattleMusicClient.LOGGER.warn(
+					"[{}] '{}' is an Ogg OPUS file, not Ogg VORBIS, so it cannot be played. "
+							+ "Re-encode it, e.g.: ffmpeg -i \"{}\" -c:a libvorbis \"{}\" . "
+							+ "Skipping this file until the music folder changes.",
+					name, path.getFileName(), path.getFileName(),
+					path.getFileName().toString().replaceFirst("\\.ogg$", "") + "-vorbis.ogg");
+		} else {
+			BattleMusicClient.LOGGER.warn(
+					"[{}] '{}' could not be decoded as Ogg Vorbis (corrupt file, or another format renamed to .ogg?). "
+							+ "Skipping this file until the music folder changes.",
+					name, path.getFileName());
+		}
+	}
+
+	private static boolean looksLikeOpus(byte[] bytes) {
+		// The first Ogg page of an Opus stream carries the ASCII magic "OpusHead".
+		int limit = Math.min(bytes.length, 512) - 8;
+		for (int i = 0; i <= limit; i++) {
+			if (bytes[i] == 'O' && bytes[i + 1] == 'p' && bytes[i + 2] == 'u' && bytes[i + 3] == 's'
+					&& bytes[i + 4] == 'H' && bytes[i + 5] == 'e' && bytes[i + 6] == 'a' && bytes[i + 7] == 'd') {
+				return true;
+			}
+		}
+		return false;
 	}
 }
