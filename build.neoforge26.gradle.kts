@@ -48,8 +48,20 @@ repositories {
 neoForge {
 	version = property("deps.neoforge") as String
 
-	// Client-only mod: no run configs are declared here since CI never runs
-	// the game, only compiles and packages it.
+	// CI only compiles/packages - it never proves the mod actually boots or
+	// works in-game. Unlike Fabric Loom (which auto-registers a default
+	// "client" run), ModDevGradle needs this declared explicitly or no run
+	// task exists at all. This gives a real way to smoke-test a launch:
+	//   ./gradlew :26.1.2-neoforge:runClient
+	// (or :26.2-neoforge:runClient). Matches the pattern used by NeoForge's
+	// own MDKs and rotgruengelb/stonecutter-mod-template's real 26.x setup.
+	runs {
+		register("client") {
+			client()
+			gameDirectory = rootProject.file("run/$mcVersion-neoforge")
+			programArgument("--username=Dev")
+		}
+	}
 }
 
 dependencies {
