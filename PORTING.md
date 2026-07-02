@@ -459,17 +459,56 @@ replace the ambiguous DSL calls with their unambiguous longhand
 (`dependencies.add("minecraft", ...)`, `configurations.getByName("mappings").dependencies.add(...)`)
 for whichever tiers are affected.
 
+**Round 8e (fifth CI run) - the round-8d fix made everything fail, worse:**
+Round 8d's "declare both Loom plugins `apply false`, `apply(plugin=...)`
+imperatively per project" idea failed immediately, on project `:1.16.5` -
+the very first target, one that was never even touched by the 26.1+ problem.
+The error was dozens of `Unresolved reference` errors for `minecraft`,
+`mappings`, `loom`, `modImplementation`, `remapJar`, `archiveFile` - i.e. the
+script's core dependency and packaging DSL stopped compiling, everywhere.
+
+Root cause: Gradle's Kotlin DSL only generates the type-safe accessor
+functions a script relies on (`minecraft(...)`, `modImplementation(...)`,
+`tasks.remapJar`, etc.) for plugins declared as plain `id("...")` in the
+static `plugins {}` block. Marking a plugin `apply false` and applying it
+later via `apply(plugin = "...")` skips that accessor generation entirely,
+even for the project where it does get applied. Declaring `dev.architectury.loom`
+`apply false` therefore broke it everywhere, not just on the two 26.1+
+targets it was meant to route around. This was flagged as an open, untested
+risk in round 8d's own writeup - it was worth trying since apply-false is a
+normal pattern for OTHER kinds of plugins, but it does not hold for Loom's
+accessor-heavy DSL, and there was no way to confirm that without running
+real Gradle.
+
+**Fix: stop trying to keep Fabric 26.1.2/26.2 in this build at all.**
+`dev.architectury.loom` is back to a plain, non-"apply false" declaration
+(the exact form that got 26 of 28 targets through configuration in round
+8c/8d before hitting the 26.1+ wall). `net.fabricmc.fabric-loom` is removed
+entirely. `26.1.2` and `26.2` are removed from the Fabric `versions(...)`
+list in `settings.gradle.kts` (they were never registered for
+Forge/NeoForge to begin with). The `mappings(loom.officialMojangMappings())`
+call is now unconditional, since every remaining target is an obfuscated
+Minecraft release.
+
+**Net result:** this build now covers Minecraft 1.16.5 through 1.21.8 (the
+full obfuscated era) on Fabric, Forge, and NeoForge - 12 Fabric + 6 Forge + 6
+NeoForge = 24 targets. Minecraft 26.1 and 26.2 are not supported by any
+loader in this build. That is a real, disclosed reduction from the original
+ask (NeoForge "up to 26.2"), not a hidden one: no combination of Forge- and
+NeoForge-compatible tooling can build against 26.1+ today (open upstream
+bug, confirmed above), and trying to carve out a Fabric-only exception broke
+the entire build. If Architectury Loom ships #328's fix, the 12 fabric +
+Forge/NeoForge 26.1.2/26.2 targets can be re-added by copying the pattern
+used for every other tier here (add to `versions(...)`/`version(...)`, add a
+`stonecutter.properties.toml` section, no source changes needed since the
+Java-level `//? if >=26.1` gates were never removed).
+
 **Still unverifiable offline (the remaining candidates if a tier fails):**
-1. The dual-Loom-plugin `apply false` pattern above (round 8d) - see its own
-   "Residual risk" paragraph.
-2. NeoForge 1.20.4 `ConfigScreenHandler` existence (removed later; believed
-   present in 20.4) and the exact `IConfigScreenFactory` shape on 26.x (moot
-   for NeoForge now that 26.x NeoForge is dropped, but still applies to the
-   Fabric 26.1.2/26.2 `ClothConfigScreen` caller path if Cloth Config's own
-   Fabric integration differs there).
-3. Forge 1.19.x `RenderGuiEvent.Post#getPoseStack` exact getter name.
-4. `pack_format` values for 1.21.8 (warn-only on modern loaders) and
-   `clientSideOnly=true` placement in `neoforge.mods.toml`.
+1. Forge 1.19.x `RenderGuiEvent.Post#getPoseStack` exact getter name.
+2. `pack_format` value for 1.21.8 (warn-only on modern loaders).
+3. NeoForge 1.20.4 `ConfigScreenHandler` existence (believed present at that
+   version; removed/replaced later by `IConfigScreenFactory`).
+4. `clientSideOnly=true` placement in `neoforge.mods.toml`.
 
 Everything else follows the same pattern as rounds 3-7: if a tier fails to
 compile, the CI log will name the exact symbol, and the fix is a one-line gate

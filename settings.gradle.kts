@@ -26,18 +26,14 @@ pluginManagement {
 		// hard-requires a mappings dependency that does not exist for
 		// non-obfuscated Minecraft (confirmed open upstream bug,
 		// architectury/architectury-loom#328, unresolved as of the latest
-		// 1.13 release). build.gradle.kts therefore applies mainline
-		// net.fabricmc.fabric-loom instead for the two non-obfuscated,
-		// Fabric-only targets (26.1.2, 26.2) - see its "apply false" plugins
-		// block and PORTING.md round 8d for the full writeup. NeoForge has no
-		// equivalent workaround yet, so 26.1.2-neoforge / 26.2-neoforge are not
-		// registered below; NeoForge coverage stops at the last obfuscated
-		// release, 1.21.8.
+		// 1.13 release). A prior revision tried to special-case 26.1+ by also
+		// declaring mainline net.fabricmc.fabric-loom and picking between the
+		// two per-project; that broke every target's Kotlin DSL accessors
+		// (minecraft(...), mappings(...), modImplementation(...), remapJar),
+		// not just the 26.1+ ones (see PORTING.md round 8e). No 26.1+ target,
+		// for any loader, is registered below; every tier here targets an
+		// obfuscated (<=1.21.8) Minecraft release.
 		id("dev.architectury.loom") version "1.17-SNAPSHOT"
-		// Mainline Fabric Loom, non-obfuscated mode (plugin id itself denotes
-		// this on 26.1+; see docs.fabricmc.net/develop/loom). Used ONLY by the
-		// 26.1.2 / 26.2 Fabric targets, applied imperatively in build.gradle.kts.
-		id("net.fabricmc.fabric-loom") version "1.17.+"
 	}
 }
 
@@ -67,13 +63,14 @@ stonecutter {
 		//   1.21.4  -> GuiGraphics + legacy blit, Java 21
 		//   1.21.5  -> GuiGraphics + RenderPipelines blit, Java 21
 		//   1.21.8  -> new HUD (HudElementRegistry) + RenderPipelines blit, Java 21
-		//   26.1.2  -> new HUD + RenderPipelines + non-obf names, Java 25
-		//   26.2    -> active/dev version, Java 25
+		//
+		// Stops at 1.21.8, the last obfuscated Minecraft release: Architectury
+		// Loom cannot build 26.1+ at all (see the dev.architectury.loom plugin
+		// comment above and PORTING.md round 8e).
 		versions(
 			"1.16.5", "1.17.1", "1.18.2", "1.19.2", "1.19.4",
 			"1.20.1", "1.20.4", "1.20.6",
 			"1.21.1", "1.21.4", "1.21.5", "1.21.8",
-			"26.1.2", "26.2",
 		)
 
 		// ---- Forge (1.16.5 - 1.20.1) --------------------------------------

@@ -1,17 +1,26 @@
 plugins {
-	// Architectury Loom: one Gradle plugin for Fabric (<26.1, obfuscated),
-	// Forge, and NeoForge. The platform per target comes from
-	// versions/<id>/gradle.properties (loom.platform=forge|neoforge; absent =
-	// fabric). Version pinned centrally in settings.gradle.kts
-	// (pluginManagement). Declared "apply false": it cannot build Minecraft
-	// 26.1+ at all (open upstream bug, architectury/architectury-loom#328 -
-	// it hard-requires a mappings dependency that does not exist for
-	// non-obfuscated Minecraft), so the two non-obfuscated Fabric-only
-	// targets (26.1.2, 26.2) apply mainline Fabric Loom instead, below.
-	id("dev.architectury.loom") apply false
-	// Mainline Fabric Loom, non-obfuscated mode. Also "apply false": only the
-	// 26.1.2 / 26.2 Fabric targets use it.
-	id("net.fabricmc.fabric-loom") apply false
+	// Architectury Loom: one Gradle plugin for Fabric, Forge, and NeoForge.
+	// The platform per target comes from versions/<id>/gradle.properties
+	// (loom.platform=forge|neoforge; absent = fabric). Version pinned centrally
+	// in settings.gradle.kts (pluginManagement).
+	//
+	// Applied here as a normal, non-"apply false" plugin (NOT imperatively via
+	// apply(plugin=...)) because Gradle's Kotlin DSL only generates the
+	// type-safe accessors this script relies on (minecraft(...), mappings(...),
+	// modImplementation(...), tasks.remapJar, .archiveFile, ...) for plugins
+	// declared this way. An earlier revision declared this "apply false" and
+	// applied it imperatively per-project to special-case Minecraft 26.1+; that
+	// broke EVERY one of those accessors on EVERY target (not just the 26.1+
+	// ones), since accessor generation is a compile-time decision based on the
+	// static plugins{} block, not on which plugin ends up applied at runtime.
+	// See PORTING.md round 8e for the full story.
+	//
+	// Consequence: Architectury Loom cannot build Minecraft 26.1+ at all (open
+	// upstream bug, architectury/architectury-loom#328 - it hard-requires a
+	// mappings dependency that does not exist for non-obfuscated Minecraft), so
+	// NO 26.1+ target (any loader) is registered in settings.gradle.kts. Fabric
+	// coverage stops at 1.21.8, same as Forge/NeoForge.
+	id("dev.architectury.loom")
 	// Publishes each version's jar to Modrinth via the `modrinth` task.
 	id("com.modrinth.minotaur")
 }
@@ -35,13 +44,6 @@ fun mcAtLeast(v: String): Boolean {
 	}
 	return true
 }
-
-// The two non-obfuscated Fabric targets (26.1.2, 26.2) cannot use Architectury
-// Loom (see the plugins{} comment above) and use mainline Fabric Loom's
-// non-obfuscated mode instead. Every other target - every Fabric tier through
-// 1.21.8, and every Forge/NeoForge tier - uses Architectury Loom as before.
-val useMainlineLoom = loader == "fabric" && mcAtLeast("26.1")
-apply(plugin = if (useMainlineLoom) "net.fabricmc.fabric-loom" else "dev.architectury.loom")
 
 // Version source of truth:
 //   - CI release: a git tag like v1.3.0 sets MOD_VERSION=1.3.0 (see release.yml)
@@ -85,12 +87,11 @@ repositories {
 
 dependencies {
 	minecraft("com.mojang:minecraft:$mcVersion")
-	// Official Mojang mappings on obfuscated versions. 26.1+ ships
-	// non-obfuscated, so no mappings are applied there (loom-back-compat did
-	// the same internally before this build moved to Architectury Loom).
-	if (!mcAtLeast("26.1")) {
-		mappings(loom.officialMojangMappings())
-	}
+	// Official Mojang mappings. Every registered target is an obfuscated
+	// Minecraft release (<=1.21.8); see the dev.architectury.loom plugin
+	// comment above for why 26.1+ (non-obfuscated, no mappings artifact
+	// exists) is not supported by this build at all.
+	mappings(loom.officialMojangMappings())
 
 	when (loader) {
 		"fabric" -> {

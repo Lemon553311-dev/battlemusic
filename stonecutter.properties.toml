@@ -167,25 +167,12 @@ deps.modmenu_from_modrinth = "true"  # same flaky-host armor as 1.21.5 (jar name
 deps.cloth_config = "19.0.147"      # confirmed on Modrinth
 mod.java_compat = ">=21"
 
-# ---- 26.1.x: non-obfuscated names (Identifier/GuiGraphicsExtractor), Java 25 ----
-["26.1.2"]
-mod.mc_compat = "~26.1"
-mod.loader_compat = ">=0.16.0"
-mod.mc_releases = "26.1,26.1.1,26.1.2"
-deps.fabric_api = "0.152.1+26.1.2"  # your known-good values
-deps.modmenu = "18.0.0-beta.1"
-deps.cloth_config = "26.1.154"
-mod.java_compat = ">=25"
-
-# ---- 26.2: active/dev version, Java 25 ----
-["26.2"]
-mod.mc_compat = "~26.2"
-mod.loader_compat = ">=0.16.0"
-mod.mc_releases = "26.2"
-deps.fabric_api = "0.152.2+26.2"    # from the current Stonecutter template
-deps.modmenu = "20.0.0-beta.3"
-deps.cloth_config = "26.2.155"      # confirmed on Modrinth
-mod.java_compat = ">=25"
+# NOTE: 26.1.2 and 26.2 (Fabric) are intentionally NOT registered in
+# settings.gradle.kts. Architectury Loom cannot build Minecraft 26.1+ at all
+# (open upstream bug, architectury/architectury-loom#328 - it hard-requires a
+# mappings dependency that does not exist for non-obfuscated Minecraft).
+# Fabric coverage stops at 1.21.8, the last obfuscated release, matching
+# Forge/NeoForge. See PORTING.md round 8e for the full writeup.
 
 # =============================================================================
 # Forge targets (1.16.5 - 1.20.1). Each project is named "<mc>-forge"; the
