@@ -1,7 +1,7 @@
-# Forge (1.16.5 - 1.20.1) and NeoForge 1.20.4 mod metadata. ${...} values are
-# filled by processResources from stonecutter.properties.toml per tier. This
-# file is excluded from Fabric jars and from NeoForge >=1.20.5 jars (those use
-# META-INF/neoforge.mods.toml instead).
+# Forge (1.16.5 - 1.20.1) and NeoForge 1.20.4 mod metadata. The placeholders
+# below are filled by processResources from stonecutter.properties.toml per
+# tier. This file is excluded from Fabric jars and from NeoForge >=1.20.5
+# jars (those use META-INF/neoforge.mods.toml instead).
 modLoader="javafml"
 loaderVersion="${fml_range}"
 license="MIT"

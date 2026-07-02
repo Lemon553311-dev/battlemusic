@@ -22,12 +22,12 @@ import net.neoforged.neoforge.common.NeoForge;
 
 import net.minecraft.client.Minecraft;
 //? if >=26.1 {
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
-//?} elif >=1.20 {
-/*import net.minecraft.client.gui.GuiGraphics;
+*///?} elif >=1.20 {
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
-*///?} else {
+//?} else {
 /*import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -62,10 +62,10 @@ public final class LastHeartFeature {
 
 	// Bundled at assets/battlemusic/textures/gui/last_heart_standing.png
 	//? if >=26.1 {
-	private static final Identifier IMAGE = mkId("textures/gui/last_heart_standing.png");
-	//?} else {
-	/*private static final ResourceLocation IMAGE = mkId("textures/gui/last_heart_standing.png");
-	*///?}
+	/*private static final Identifier IMAGE = mkId("textures/gui/last_heart_standing.png");
+	*///?} else {
+	private static final ResourceLocation IMAGE = mkId("textures/gui/last_heart_standing.png");
+	//?}
 	// Native pixel size of that PNG, used for aspect-correct scaling.
 	private static final int IMG_W = 1023;
 	private static final int IMG_H = 667;
@@ -139,10 +139,10 @@ public final class LastHeartFeature {
 	}
 
 	//? if >=26.1 {
-	private void onHudRender(GuiGraphicsExtractor graphics) {
-	//?} elif >=1.20 {
-	/*private void onHudRender(GuiGraphics graphics) {
-	*///?} else {
+	/*private void onHudRender(GuiGraphicsExtractor graphics) {
+	*///?} elif >=1.20 {
+	private void onHudRender(GuiGraphics graphics) {
+	//?} else {
 	/*private void onHudRender(PoseStack matrices) {
 	*///?}
 		if (!animActive) return;
@@ -258,14 +258,14 @@ public final class LastHeartFeature {
 	}
 
 	//? if >=26.1 {
-	private static Identifier mkId(String path) {
+	/*private static Identifier mkId(String path) {
 		return Identifier.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
 	}
-	//?} elif >=1.21 {
-	/*private static ResourceLocation mkId(String path) {
+	*///?} elif >=1.21 {
+	private static ResourceLocation mkId(String path) {
 		return ResourceLocation.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
 	}
-	*///?} else {
+	//?} else {
 	/*private static ResourceLocation mkId(String path) {
 		return new ResourceLocation(BattleMusicClient.MOD_ID, path);
 	}

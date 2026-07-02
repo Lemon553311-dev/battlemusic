@@ -9,8 +9,11 @@ package me.lemon553311.battlemusic.config;
 //   - 1.20.4: still the Forge-style ConfigScreenHandler.ConfigScreenFactory
 //     (in net.neoforged.neoforge.client).
 //   - 1.20.5-1.20.6: IConfigScreenFactory (net.neoforged.neoforge.client.gui),
-//     registered on the mod container as a Supplier; javadoc-confirmed
-//     signature createScreen(Minecraft, Screen).
+//     registered directly (not wrapped in a Supplier - ModContainer overloads
+//     registerExtensionPoint(Class<T>,T) and registerExtensionPoint(Class<T>,
+//     Supplier<T>), and a zero-arg lambda around the factory lambda is
+//     genuinely ambiguous between them); javadoc-confirmed signature
+//     createScreen(Minecraft, Screen).
 //   - 1.21+: IConfigScreenFactory's method became
 //     createScreen(ModContainer, Screen), registered as a direct instance
 //     (this is the shape the 21.x ConfigurationScreen::new example requires).
@@ -42,17 +45,17 @@ import net.neoforged.fml.ModLoadingContext;
 		}
 *///?}
 //? if neoforge && >=1.21 {
-/*		ModLoadingContext.get().getActiveContainer().registerExtensionPoint(
+		/*ModLoadingContext.get().getActiveContainer().registerExtensionPoint(
 				IConfigScreenFactory.class, (container, parent) -> ClothConfigScreen.build(parent));
 *///?} elif neoforge && >=1.20.5 {
-/*		ModLoadingContext.get().getActiveContainer().registerExtensionPoint(
-				IConfigScreenFactory.class, () -> (minecraft, parent) -> ClothConfigScreen.build(parent));
+		/*ModLoadingContext.get().getActiveContainer().registerExtensionPoint(
+				IConfigScreenFactory.class, (IConfigScreenFactory) (minecraft, parent) -> ClothConfigScreen.build(parent));
 *///?} elif neoforge {
-/*		ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
+		/*ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
 				() -> new ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> ClothConfigScreen.build(parent)));
 *///?}
 //? if neoforge {
-/*	}
+	/*}
 }
 *///?} else {
 // Placeholder on non-NeoForge targets; the real class is NeoForge-gated above.

@@ -44,17 +44,17 @@ import net.minecraftforge.fml.ModLoadingContext;
 		}
 *///?}
 //? if forge && >=1.19 {
-/*		ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
+		/*ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
 				() -> new ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> ClothConfigScreen.build(parent)));
 *///?} elif forge && >=1.17 {
-/*		ModLoadingContext.get().registerExtensionPoint(ConfigGuiHandler.ConfigGuiFactory.class,
+		/*ModLoadingContext.get().registerExtensionPoint(ConfigGuiHandler.ConfigGuiFactory.class,
 				() -> new ConfigGuiHandler.ConfigGuiFactory((mc, parent) -> ClothConfigScreen.build(parent)));
 *///?} elif forge {
-/*		ModLoadingContext.get().registerExtensionPoint(ExtensionPoint.CONFIGGUIFACTORY,
+		/*ModLoadingContext.get().registerExtensionPoint(ExtensionPoint.CONFIGGUIFACTORY,
 				() -> (mc, parent) -> ClothConfigScreen.build(parent));
 *///?}
 //? if forge {
-/*	}
+	/*}
 }
 *///?} else {
 // Placeholder on non-Forge targets; the real class is Forge-gated above.

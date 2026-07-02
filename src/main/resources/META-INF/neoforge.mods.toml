@@ -1,4 +1,4 @@
-# NeoForge (>=1.20.5) mod metadata. ${...} values are filled by
+# NeoForge (>=1.20.5) mod metadata. The placeholders below are filled by
 # processResources from stonecutter.properties.toml per tier. Excluded from
 # Fabric and Forge jars; NeoForge 1.20.4 uses META-INF/mods.toml instead.
 modLoader="javafml"

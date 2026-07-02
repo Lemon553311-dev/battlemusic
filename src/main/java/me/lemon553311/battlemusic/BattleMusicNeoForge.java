@@ -48,15 +48,15 @@ public final class BattleMusicNeoForge {
 		// Game bus: end-of-tick driving + disconnect reset.
 *///?}
 //? if neoforge && >=1.20.5 {
-/*		NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) ->
+		/*NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) ->
 				BattleMusicClient.onEndClientTick(Minecraft.getInstance()));
 *///?} elif neoforge {
-/*		NeoForge.EVENT_BUS.addListener((TickEvent.ClientTickEvent e) -> {
+		/*NeoForge.EVENT_BUS.addListener((TickEvent.ClientTickEvent e) -> {
 			if (e.phase == TickEvent.Phase.END) BattleMusicClient.onEndClientTick(Minecraft.getInstance());
 		});
 *///?}
 //? if neoforge {
-/*		NeoForge.EVENT_BUS.addListener(
+		/*NeoForge.EVENT_BUS.addListener(
 				(ClientPlayerNetworkEvent.LoggingOut e) -> BattleMusicClient.onDisconnect());
 
 		// No universal client-stopping event across 1.20.4-26.2; release the

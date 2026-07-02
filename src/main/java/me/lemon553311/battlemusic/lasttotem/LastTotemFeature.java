@@ -31,10 +31,10 @@ import net.neoforged.neoforge.event.TickEvent;
 
 import net.minecraft.client.Minecraft;
 //? if >=26.1 {
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-//?} elif >=1.20 {
-/*import net.minecraft.client.gui.GuiGraphics;
-*///?} else {
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
+*///?} elif >=1.20 {
+import net.minecraft.client.gui.GuiGraphics;
+//?} else {
 /*import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiComponent;
 *///?}
@@ -45,10 +45,10 @@ import net.minecraft.client.renderer.RenderPipelines;
 /*import net.minecraft.client.renderer.RenderType;
 *///?}
 //? if >=26.1 {
-import net.minecraft.resources.Identifier;
-//?} else {
-/*import net.minecraft.resources.ResourceLocation;
-*///?}
+/*import net.minecraft.resources.Identifier;
+*///?} else {
+import net.minecraft.resources.ResourceLocation;
+//?}
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -80,10 +80,10 @@ public final class LastTotemFeature {
 
 	// Bundled at assets/battlemusic/textures/gui/last_totem_standing.png
 	//? if >=26.1 {
-	private static final Identifier IMAGE = mkId("textures/gui/last_totem_standing.png");
-	//?} else {
-	/*private static final ResourceLocation IMAGE = mkId("textures/gui/last_totem_standing.png");
-	*///?}
+	/*private static final Identifier IMAGE = mkId("textures/gui/last_totem_standing.png");
+	*///?} else {
+	private static final ResourceLocation IMAGE = mkId("textures/gui/last_totem_standing.png");
+	//?}
 	// Native pixel size of that PNG, used for aspect-correct scaling.
 	private static final int IMG_W = 1023;
 	private static final int IMG_H = 667;
@@ -222,10 +222,10 @@ public final class LastTotemFeature {
 	}
 
 	//? if >=26.1 {
-	private void onHudRender(GuiGraphicsExtractor graphics) {
-	//?} elif >=1.20 {
-	/*private void onHudRender(GuiGraphics graphics) {
-	*///?} else {
+	/*private void onHudRender(GuiGraphicsExtractor graphics) {
+	*///?} elif >=1.20 {
+	private void onHudRender(GuiGraphics graphics) {
+	//?} else {
 	/*private void onHudRender(PoseStack matrices) {
 	*///?}
 		if (!animActive) return;
@@ -335,14 +335,14 @@ public final class LastTotemFeature {
 	}
 
 	//? if >=26.1 {
-	private static Identifier mkId(String path) {
+	/*private static Identifier mkId(String path) {
 		return Identifier.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
 	}
-	//?} elif >=1.21 {
-	/*private static ResourceLocation mkId(String path) {
+	*///?} elif >=1.21 {
+	private static ResourceLocation mkId(String path) {
 		return ResourceLocation.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
 	}
-	*///?} else {
+	//?} else {
 	/*private static ResourceLocation mkId(String path) {
 		return new ResourceLocation(BattleMusicClient.MOD_ID, path);
 	}

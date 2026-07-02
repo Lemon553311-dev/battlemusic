@@ -50,13 +50,13 @@ public final class BattleMusicForge {
 		// lists, so joining vanilla / dedicated servers keeps working.
 *///?}
 //? if forge && >=1.18 {
-/*		ModLoadingContext.get().registerExtensionPoint(IExtensionPoint.DisplayTest.class,
+		/*ModLoadingContext.get().registerExtensionPoint(IExtensionPoint.DisplayTest.class,
 				() -> new IExtensionPoint.DisplayTest(() -> NetworkConstants.IGNORESERVERONLY, (remote, isServer) -> true));
 *///?} elif forge && >=1.17 {
-/*		ModLoadingContext.get().registerExtensionPoint(IExtensionPoint.DisplayTest.class,
+		/*ModLoadingContext.get().registerExtensionPoint(IExtensionPoint.DisplayTest.class,
 				() -> new IExtensionPoint.DisplayTest(() -> FMLNetworkConstants.IGNORESERVERONLY, (remote, isServer) -> true));
 *///?} elif forge {
-/*		ModLoadingContext.get().registerExtensionPoint(ExtensionPoint.DISPLAYTEST,
+		/*ModLoadingContext.get().registerExtensionPoint(ExtensionPoint.DISPLAYTEST,
 				() -> Pair.of(() -> FMLNetworkConstants.IGNORESERVERONLY, (remote, isServer) -> true));
 *///?}
 //? if forge {
@@ -76,10 +76,10 @@ public final class BattleMusicForge {
 		});
 *///?}
 //? if forge && >=1.19 {
-/*		MinecraftForge.EVENT_BUS.addListener(
+		/*MinecraftForge.EVENT_BUS.addListener(
 				(ClientPlayerNetworkEvent.LoggingOut e) -> BattleMusicClient.onDisconnect());
 *///?} elif forge {
-/*		MinecraftForge.EVENT_BUS.addListener(
+		/*MinecraftForge.EVENT_BUS.addListener(
 				(ClientPlayerNetworkEvent.LoggedOutEvent e) -> BattleMusicClient.onDisconnect());
 *///?}
 //? if forge {
