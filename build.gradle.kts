@@ -1,9 +1,17 @@
 plugins {
-	// Architectury Loom: one Gradle plugin for Fabric, Forge, and NeoForge.
-	// The platform per target comes from versions/<id>/gradle.properties
-	// (loom.platform=forge|neoforge; absent = fabric). Version pinned centrally
-	// in settings.gradle.kts (pluginManagement).
-	id("dev.architectury.loom")
+	// Architectury Loom: one Gradle plugin for Fabric (<26.1, obfuscated),
+	// Forge, and NeoForge. The platform per target comes from
+	// versions/<id>/gradle.properties (loom.platform=forge|neoforge; absent =
+	// fabric). Version pinned centrally in settings.gradle.kts
+	// (pluginManagement). Declared "apply false": it cannot build Minecraft
+	// 26.1+ at all (open upstream bug, architectury/architectury-loom#328 -
+	// it hard-requires a mappings dependency that does not exist for
+	// non-obfuscated Minecraft), so the two non-obfuscated Fabric-only
+	// targets (26.1.2, 26.2) apply mainline Fabric Loom instead, below.
+	id("dev.architectury.loom") apply false
+	// Mainline Fabric Loom, non-obfuscated mode. Also "apply false": only the
+	// 26.1.2 / 26.2 Fabric targets use it.
+	id("net.fabricmc.fabric-loom") apply false
 	// Publishes each version's jar to Modrinth via the `modrinth` task.
 	id("com.modrinth.minotaur")
 }
@@ -27,6 +35,13 @@ fun mcAtLeast(v: String): Boolean {
 	}
 	return true
 }
+
+// The two non-obfuscated Fabric targets (26.1.2, 26.2) cannot use Architectury
+// Loom (see the plugins{} comment above) and use mainline Fabric Loom's
+// non-obfuscated mode instead. Every other target - every Fabric tier through
+// 1.21.8, and every Forge/NeoForge tier - uses Architectury Loom as before.
+val useMainlineLoom = loader == "fabric" && mcAtLeast("26.1")
+apply(plugin = if (useMainlineLoom) "net.fabricmc.fabric-loom" else "dev.architectury.loom")
 
 // Version source of truth:
 //   - CI release: a git tag like v1.3.0 sets MOD_VERSION=1.3.0 (see release.yml)

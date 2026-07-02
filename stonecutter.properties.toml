@@ -350,24 +350,12 @@ mod.mc_range_maven = "[1.21.8]"
 mod.pack_format = "64"               # verify
 mod.client_side_only_line = "clientSideOnly=true"
 
-["26.1.2-neoforge"]
-mod.mc_compat = "26.1.2"
-mod.mc_releases = "26.1.2"
-mod.java_compat = ">=25"
-deps.neoforge = "26.1.2.76"          # confirmed via maven.neoforged.net latest-version API
-deps.cloth_config = "26.1.154"       # confirmed on maven.shedaniel.me (neoforge artifact)
-mod.loader_range = "[26.1.2,)"
-mod.mc_range_maven = "[26.1.2]"
-mod.pack_format = "80"               # verify
-mod.client_side_only_line = "clientSideOnly=true"
-
-["26.2-neoforge"]
-mod.mc_compat = "26.2"
-mod.mc_releases = "26.2"
-mod.java_compat = ">=25"
-deps.neoforge = "26.2.0.7-beta"      # confirmed via maven.neoforged.net latest-version API (newest 26.2 build; still beta)
-deps.cloth_config = "26.2.155"       # confirmed on maven.shedaniel.me (neoforge artifact)
-mod.loader_range = "[26.2,)"
-mod.mc_range_maven = "[26.2,)"
-mod.pack_format = "80"               # verify
-mod.client_side_only_line = "clientSideOnly=true"
+# NOTE: 26.1.2-neoforge and 26.2-neoforge are intentionally NOT registered in
+# settings.gradle.kts. Architectury Loom (the plugin that gives NeoForge its
+# Forge-compatible build support) cannot build against Minecraft 26.1+ at
+# all - it hard-requires a mappings dependency that does not exist for
+# non-obfuscated Minecraft (open upstream bug,
+# architectury/architectury-loom#328, unresolved as of its latest 1.13
+# release). NeoForge coverage therefore stops at 1.21.8, the last obfuscated
+# release. See PORTING.md round 8d for the full writeup and what to try if
+# that upstream issue is ever fixed.

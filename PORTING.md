@@ -404,13 +404,71 @@ jar from there. The 26.x tiers stay on TerraformersMC (their exact pins are
 not Modrinth-confirmed but resolved from TerraformersMC in earlier CI runs);
 flip the same flag for them if that host misbehaves again.
 
+**Round 8d (fourth CI run) - confirmed upstream blocker on Minecraft 26.1+:**
+Configuration cleared every Forge tier and NeoForge 20.4 through 1.21.8 (all
+with the exact pins), then died on project `:26.1.2` (the plain Fabric tier)
+with `Failed to setup Minecraft, java.lang.IllegalArgumentException:
+Configuration 'mappings' has no dependencies`. Root cause, confirmed via a web
+search that found the exact open upstream report
+(architectury/architectury-loom#328, filed Feb 2026, still open, no fix in any
+released version): **Architectury Loom cannot build against Minecraft 26.1+ at
+all.** Minecraft stopped shipping obfuscated jars at 26.1, so there is no
+"official Mojang mappings" artifact for it anymore; mainline Fabric Loom
+added a dedicated non-obfuscated mode for this (a *different* plugin ID,
+`net.fabricmc.fabric-loom`, that skips the mappings requirement entirely -
+see docs.fabricmc.net/develop/loom), but Architectury Loom has not shipped
+that support as of its latest release (1.13, predating the bug report).
+
+This blocks 26.1.2 and 26.2 for EVERY loader Architectury Loom backs, not
+just NeoForge - it is a property of the plugin, not of any one loader.
+
+**Fix:**
+- `26.1.2-neoforge` and `26.2-neoforge` are removed from
+  `settings.gradle.kts` entirely. There is currently no supported way to
+  build a NeoForge jar for 26.1+ from this project; NeoForge coverage stops
+  at **1.21.8**, the last obfuscated release. (1.20.1 NeoForge is still
+  covered via the shared Forge 1.20.1 jar, as before.)
+- The Fabric `26.1.2` and `26.2` targets are kept (dropping them would be an
+  actual regression from the mod's original single-loader state, where they
+  already worked). `build.gradle.kts` now declares BOTH `dev.architectury.loom`
+  and `net.fabricmc.fabric-loom` as `apply false` in its `plugins {}` block,
+  then imperatively applies mainline `net.fabricmc.fabric-loom` for those two
+  targets only (`loader == "fabric" && mcAtLeast("26.1")`) and
+  `dev.architectury.loom` for every other target (every Fabric tier through
+  1.21.8, and every Forge/NeoForge tier), via `apply(plugin = ...)`.
+- This mirrors exactly what the mod's original `loom-back-compat` plugin did
+  internally before this multi-loader port ("Applies the correct Loom variant
+  per version (obfuscated <=1.21.x vs the non-obfuscated 26.1+ variant)") -
+  loom-back-compat only ever covered Fabric, so it could not be kept once
+  Forge/NeoForge needed Architectury Loom instead; this reimplements the same
+  per-version plugin choice explicitly, at the same granularity.
+
+**Residual risk (could not be verified without running real Gradle):**
+Declaring two Loom-family plugins side by side in one `plugins {}` block is
+an unusual pattern for a single shared script (Stonecutter's whole model is
+one physical `build.gradle.kts` evaluated per subproject) - IF Gradle Kotlin
+DSL treats their same-named DSL sugar (`minecraft(...)`, `modImplementation(...)`,
+`mappings(...)`) as ambiguous when both plugin jars are present on a
+project's classpath, every tier (not just 26.1.2/26.2) would fail to
+compile-configure with a Kotlin script "ambiguous overload" error naming the
+call site. This exact apply-conditionally-per-version pattern is how
+loom-back-compat itself works internally, which is strong evidence it is a
+solved, working pattern in practice - but it was not possible to confirm here
+without a real Gradle invocation. If the next log shows this, the fix is to
+replace the ambiguous DSL calls with their unambiguous longhand
+(`dependencies.add("minecraft", ...)`, `configurations.getByName("mappings").dependencies.add(...)`)
+for whichever tiers are affected.
+
 **Still unverifiable offline (the remaining candidates if a tier fails):**
-1. Fabric 26.1.2 / 26.2 under Architectury Loom with no mappings call
-   (loom-back-compat handled non-obf internally; mainline loom should too).
+1. The dual-Loom-plugin `apply false` pattern above (round 8d) - see its own
+   "Residual risk" paragraph.
 2. NeoForge 1.20.4 `ConfigScreenHandler` existence (removed later; believed
-   present in 20.4) and the exact `IConfigScreenFactory` shape on 26.x.
+   present in 20.4) and the exact `IConfigScreenFactory` shape on 26.x (moot
+   for NeoForge now that 26.x NeoForge is dropped, but still applies to the
+   Fabric 26.1.2/26.2 `ClothConfigScreen` caller path if Cloth Config's own
+   Fabric integration differs there).
 3. Forge 1.19.x `RenderGuiEvent.Post#getPoseStack` exact getter name.
-4. `pack_format` values for 1.21.8 / 26.x (warn-only on modern loaders) and
+4. `pack_format` values for 1.21.8 (warn-only on modern loaders) and
    `clientSideOnly=true` placement in `neoforge.mods.toml`.
 
 Everything else follows the same pattern as rounds 3-7: if a tier fails to

@@ -13,14 +13,31 @@ pluginManagement {
 		// Pin the Modrinth publishing plugin version centrally; build.gradle.kts
 		// applies it without a version (avoids multi-project version clashes).
 		id("com.modrinth.minotaur") version "2.+"
-		// Architectury Loom builds Fabric, Forge, AND NeoForge targets from the
-		// same build script (the platform comes from each version subproject's
-		// loom.platform gradle property; see versions/<id>/gradle.properties).
-		// It replaces loom-back-compat, which was Fabric-only. The version tracks
-		// the fabric-loom line the project used before (1.17-SNAPSHOT); if this
-		// exact version does not resolve, check the latest on
-		// https://maven.architectury.dev/dev/architectury/loom/ (see PORTING.md).
+		// Architectury Loom builds Fabric (<26.1, obfuscated), Forge, AND
+		// NeoForge targets from the same build script (the platform comes from
+		// each version subproject's loom.platform gradle property; see
+		// versions/<id>/gradle.properties). It replaces loom-back-compat, which
+		// was Fabric-only. The version tracks the fabric-loom line the project
+		// used before (1.17-SNAPSHOT); if this exact version does not resolve,
+		// check the latest on https://maven.architectury.dev/dev/architectury/loom/
+		// (see PORTING.md).
+		//
+		// IMPORTANT: Architectury Loom CANNOT build Minecraft 26.1+ at all - it
+		// hard-requires a mappings dependency that does not exist for
+		// non-obfuscated Minecraft (confirmed open upstream bug,
+		// architectury/architectury-loom#328, unresolved as of the latest
+		// 1.13 release). build.gradle.kts therefore applies mainline
+		// net.fabricmc.fabric-loom instead for the two non-obfuscated,
+		// Fabric-only targets (26.1.2, 26.2) - see its "apply false" plugins
+		// block and PORTING.md round 8d for the full writeup. NeoForge has no
+		// equivalent workaround yet, so 26.1.2-neoforge / 26.2-neoforge are not
+		// registered below; NeoForge coverage stops at the last obfuscated
+		// release, 1.21.8.
 		id("dev.architectury.loom") version "1.17-SNAPSHOT"
+		// Mainline Fabric Loom, non-obfuscated mode (plugin id itself denotes
+		// this on 26.1+; see docs.fabricmc.net/develop/loom). Used ONLY by the
+		// 26.1.2 / 26.2 Fabric targets, applied imperatively in build.gradle.kts.
+		id("net.fabricmc.fabric-loom") version "1.17.+"
 	}
 }
 
@@ -75,17 +92,18 @@ stonecutter {
 		version("1.19.4-forge", "1.19.4")
 		version("1.20.1-forge", "1.20.1")
 
-		// ---- NeoForge (1.20.4 - 26.2; 1.20.1 is covered by the Forge jar) --
+		// ---- NeoForge (1.20.4 - 1.21.8; 1.20.1 is covered by the Forge jar) --
+		// Stops at 1.21.8 (the last obfuscated Minecraft release): NeoForge has
+		// no supported Loom-based toolchain for 26.1+ either (see the
+		// dev.architectury.loom plugin comment above and PORTING.md round 8d).
 		version("1.20.4-neoforge", "1.20.4")
 		version("1.20.6-neoforge", "1.20.6")
 		version("1.21.1-neoforge", "1.21.1")
 		version("1.21.4-neoforge", "1.21.4")
 		version("1.21.5-neoforge", "1.21.5")
 		version("1.21.8-neoforge", "1.21.8")
-		version("26.1.2-neoforge", "26.1.2")
-		version("26.2-neoforge", "26.2")
 
-		vcsVersion = "26.2"
+		vcsVersion = "1.21.8"
 	}
 }
 
