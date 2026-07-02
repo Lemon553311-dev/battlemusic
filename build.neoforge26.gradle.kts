@@ -78,8 +78,16 @@ tasks {
 	register<Copy>("buildAndCollect") {
 		group = "build"
 		description = "Builds the mod and collects jars into build/libs/<mod version>/"
-		// ModDevGradle does not remap; the plain `jar` task is the final artifact.
-		from(jar.flatMap { it.archiveFile }, sourcesJar.flatMap { it.archiveFile })
+		// ModDevGradle does not remap; the plain `jar` task is the final
+		// artifact. Referenced via tasks.named<Jar>(...) with the fully-
+		// qualified type (core Gradle API, not plugin-specific sugar) rather
+		// than a bare "jar"/"sourcesJar" identifier - the bare "sourcesJar"
+		// identifier did not resolve here in a real CI run (round 8g), even
+		// though bare "jar" did.
+		from(
+			tasks.named<org.gradle.api.tasks.bundling.Jar>("jar").flatMap { it.archiveFile },
+			tasks.named<org.gradle.api.tasks.bundling.Jar>("sourcesJar").flatMap { it.archiveFile },
+		)
 		into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
 		dependsOn("build")
 	}
@@ -93,7 +101,7 @@ modrinth {
 	versionName.set("Battle Music $modVersion ($mcVersion, neoforge)")
 	versionType.set("release")
 
-	uploadFile.set(tasks.jar.flatMap { it.archiveFile })
+	uploadFile.set(tasks.named<org.gradle.api.tasks.bundling.Jar>("jar").flatMap { it.archiveFile })
 
 	gameVersions.set(
 		(property("mod.mc_releases") as String).split(",").map { it.trim() }

@@ -57,15 +57,21 @@ dependencies {
 	// already), so there is nothing to map - this is the whole reason
 	// Architectury Loom cannot build these versions but mainline Loom can.
 
-	modImplementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
-	modImplementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
+	// Plain implementation, NOT modImplementation: Fabric Loom's non-obfuscated
+	// mode has no remapping machinery at all (there is nothing to remap - see
+	// the mappings comment above), so it does not define modImplementation
+	// either. Confirmed by a real CI failure (round 8g): only minecraft(...)
+	// resolved in this file; every modImplementation call and both remapJar/
+	// remapSourcesJar (further below) came back "Unresolved reference".
+	implementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
+	implementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
 
 	if (findProperty("deps.modmenu_from_modrinth") == "true") {
-		modImplementation("maven.modrinth:modmenu:${property("deps.modmenu")}")
+		implementation("maven.modrinth:modmenu:${property("deps.modmenu")}")
 	} else {
-		modImplementation("com.terraformersmc:modmenu:${property("deps.modmenu")}")
+		implementation("com.terraformersmc:modmenu:${property("deps.modmenu")}")
 	}
-	modImplementation("me.shedaniel.cloth:cloth-config-fabric:${property("deps.cloth_config")}") {
+	implementation("me.shedaniel.cloth:cloth-config-fabric:${property("deps.cloth_config")}") {
 		exclude(group = "net.fabricmc.fabric-api")
 	}
 }
@@ -92,7 +98,16 @@ tasks {
 	register<Copy>("buildAndCollect") {
 		group = "build"
 		description = "Builds the mod and collects jars into build/libs/<mod version>/"
-		from(remapJar.flatMap { it.archiveFile }, remapSourcesJar.flatMap { it.archiveFile })
+		// No remapJar in non-obf mode either (see the dependencies comment
+		// above) - the plain jar/sourcesJar tasks are the final artifacts.
+		// Referenced via tasks.named<Jar>(...) with the fully-qualified type
+		// (core Gradle API, not plugin-specific sugar) rather than a bare
+		// "jar"/"sourcesJar" identifier, since this file has now twice hit
+		// cases where an expected bare accessor did not resolve.
+		from(
+			tasks.named<org.gradle.api.tasks.bundling.Jar>("jar").flatMap { it.archiveFile },
+			tasks.named<org.gradle.api.tasks.bundling.Jar>("sourcesJar").flatMap { it.archiveFile },
+		)
 		into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
 		dependsOn("build")
 	}
@@ -106,7 +121,7 @@ modrinth {
 	versionName.set("Battle Music $modVersion ($mcVersion, fabric)")
 	versionType.set("release")
 
-	uploadFile.set(tasks.remapJar.flatMap { it.archiveFile })
+	uploadFile.set(tasks.named<org.gradle.api.tasks.bundling.Jar>("jar").flatMap { it.archiveFile })
 
 	gameVersions.set(
 		(property("mod.mc_releases") as String).split(",").map { it.trim() }
