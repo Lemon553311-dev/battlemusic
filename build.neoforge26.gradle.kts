@@ -78,16 +78,18 @@ tasks {
 	register<Copy>("buildAndCollect") {
 		group = "build"
 		description = "Builds the mod and collects jars into build/libs/<mod version>/"
-		// ModDevGradle does not remap; the plain `jar` task is the final
-		// artifact. `jar` gets a compile-time accessor (registered
-		// unconditionally by the java plugin); `sourcesJar` is created later
-		// by withSourcesJar() so it never gets one and must be looked up by
-		// name via tasks.named("sourcesJar") - a general Gradle fact, not
-		// specific to this plugin. Copy.from() accepts a bare Task/
-		// TaskProvider directly and resolves its output files itself.
-		from(tasks.jar, tasks.named("sourcesJar"))
-		into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
+		// Deliberately NOT referencing jar/sourcesJar tasks by name or
+		// accessor here at all - every prior attempt at that (bare accessor,
+		// reified named<T>(), untyped named() + cast) failed to compile for a
+		// different reason each time in real CI. Instead: depend on the
+		// standard "build" lifecycle task (guaranteed to exist on every Gradle
+		// project) and copy everything Gradle already put in build/libs/,
+		// which is the fixed, universal default output directory for archive
+		// tasks (jar, sourcesJar) on every JVM project regardless of which
+		// loader plugin is applied. This needs zero task-name knowledge.
 		dependsOn("build")
+		from(layout.buildDirectory.dir("libs"))
+		into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
 	}
 }
 
