@@ -652,6 +652,32 @@ split earlier in the same file. Verified via both `emulate_stonecutter.py`
 targets before shipping - both green, including 26.1.2-neoforge and
 26.2-neoforge specifically.
 
+## Round 8j - Fabric targets renamed "<mc>-fabric", Modrinth dry-run testing
+
+Fabric targets were previously registered as bare Minecraft versions (e.g.
+`1.16.5`) while Forge/NeoForge used `<mc>-forge` / `<mc>-neoforge`. Renamed
+every Fabric target to `<mc>-fabric` for consistency (settings.gradle.kts
+registrations, stonecutter.properties.toml section headers, stonecutter
+active project, and the CI matrix). `loader`/`mcVersion` derivation in
+build.gradle.kts and build.fabric26.gradle.kts simplified accordingly (every
+target now has an explicit loader suffix, so the old "fabric has no suffix"
+special-casing is gone). Verified with a standalone Python simulation of the
+Kotlin derivation logic across all 28 renamed targets, plus the usual
+`emulate_stonecutter.py` / `javac_check.py` sweep - all green. The actual
+published Modrinth version string is unchanged (still `<mod>+<mc>` with no
+loader suffix for Fabric, per the existing "published versions stay stable"
+behavior) - only the internal Gradle project name / CI job name changed.
+
+Also added a `publish_test` manual workflow input to release.yml. Every
+push so far has been branch pushes, so the Modrinth publish step (gated on a
+v* tag) has never actually run - it is completely unverified. Triggering the
+workflow manually with `publish_test` checked now runs the Modrinth publish
+step on every target with `MODRINTH_DRY_RUN=true`, which makes Minotaur print
+what it would upload (token validity, project id, detected game versions/
+loaders) without actually calling the Modrinth API. This is the cheapest way
+to catch a real Modrinth-side problem before it only shows up on an actual
+release tag.
+
 Everything else follows the same pattern as rounds 3-7: if a tier fails to
 compile, the CI log will name the exact symbol, and the fix is a one-line gate
 adjustment in the affected file.

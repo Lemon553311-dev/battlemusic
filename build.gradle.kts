@@ -26,11 +26,10 @@ plugins {
 }
 
 // ---- Target coordinates ---------------------------------------------------
-// Every Stonecutter target is either "<mc>" (the original Fabric tiers) or
-// "<mc>-forge" / "<mc>-neoforge".
+// Every Stonecutter target is explicitly named "<mc>-fabric" / "<mc>-forge" /
+// "<mc>-neoforge" (see settings.gradle.kts).
 val loader: String = project.name.substringAfterLast('-')
-	.takeIf { it == "forge" || it == "neoforge" } ?: "fabric"
-val mcVersion: String = if (loader == "fabric") project.name else project.name.substringBeforeLast('-')
+val mcVersion: String = project.name.substringBeforeLast('-')
 
 // Numeric per-part Minecraft version comparison (handles "26.1" > "1.21.8").
 // Self-contained so this script does not depend on any plugin's version API.

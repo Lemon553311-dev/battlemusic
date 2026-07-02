@@ -41,7 +41,7 @@ mod.fabric_api_id = "fabric-api"
 deps.fabric_loader = "0.19.3"
 
 # ---- 1.16.x: pre-GuiGraphics, pre-BuiltInRegistries, pre-Warden-registry-move, Java 8 ----
-["1.16.5"]
+["1.16.5-fabric"]
 mod.mc_compat = ">=1.16 <=1.16.5"
 mod.loader_compat = ">=0.11.3"       # verify - earliest loader that reliably supports 1.16.5
 mod.mc_releases = "1.16,1.16.1,1.16.2,1.16.3,1.16.4,1.16.5"
@@ -52,7 +52,7 @@ deps.modmenu = "1.16.23"
 deps.cloth_config = "4.16.91"        # confirmed on Modrinth
 
 # ---- 1.17.x: pre-GuiGraphics, Java 16 ----
-["1.17.1"]
+["1.17.1-fabric"]
 mod.mc_compat = ">=1.17 <=1.17.1"
 mod.loader_compat = ">=0.12.12"      # verify
 mod.mc_releases = "1.17,1.17.1"
@@ -63,7 +63,7 @@ deps.modmenu = "2.0.14"              # confirmed on Modrinth
 deps.cloth_config = "5.3.63"         # corrected - 5.0.38 does not exist on Modrinth for 1.17.1
 
 # ---- 1.18.x: pre-GuiGraphics, Java 17 ----
-["1.18.2"]
+["1.18.2-fabric"]
 mod.mc_compat = ">=1.18 <=1.18.2"
 mod.loader_compat = ">=0.13.3"       # verify
 mod.mc_releases = "1.18,1.18.1,1.18.2"
@@ -74,7 +74,7 @@ deps.modmenu = "3.2.4"
 deps.cloth_config = "6.5.102"
 
 # ---- 1.19-1.19.2: pre-GuiGraphics, pre-BuiltInRegistries (still Registry.*), Java 17 ----
-["1.19.2"]
+["1.19.2-fabric"]
 mod.mc_compat = ">=1.19 <=1.19.2"
 mod.loader_compat = ">=0.14.9"       # verify
 mod.mc_releases = "1.19,1.19.1,1.19.2"
@@ -85,7 +85,7 @@ deps.modmenu = "4.1.2"               # confirmed on Modrinth
 deps.cloth_config = "8.3.115"
 
 # ---- 1.19.3-1.19.4: pre-GuiGraphics, BuiltInRegistries now exists, Java 17 ----
-["1.19.4"]
+["1.19.4-fabric"]
 mod.mc_compat = ">=1.19.3 <=1.19.4"
 mod.loader_compat = ">=0.14.19"      # verify
 mod.mc_releases = "1.19.3,1.19.4"
@@ -95,7 +95,7 @@ deps.modmenu = "6.3.1"
 deps.cloth_config = "10.1.135"
 
 # ---- 1.20-1.20.1: first GuiGraphics version, Java 17 ----
-["1.20.1"]
+["1.20.1-fabric"]
 mod.mc_compat = ">=1.20 <=1.20.1"
 mod.loader_compat = ">=0.14.0"
 mod.mc_releases = "1.20,1.20.1"
@@ -105,7 +105,7 @@ deps.modmenu = "7.2.2"              # confirmed on Modrinth
 deps.cloth_config = "11.1.136"      # confirmed on Modrinth
 
 # ---- 1.20.2-1.20.4: GuiGraphics era, Java 17 ----
-["1.20.4"]
+["1.20.4-fabric"]
 mod.mc_compat = ">=1.20.2 <=1.20.4"
 mod.loader_compat = ">=0.15.6"       # verify
 mod.mc_releases = "1.20.2,1.20.3,1.20.4"
@@ -115,7 +115,7 @@ deps.modmenu = "9.0.0"
 deps.cloth_config = "13.0.138"       # corrected - 12.0.118+fabric does not exist on Maven
 
 # ---- 1.20.5-1.20.6: GuiGraphics era, Mojang bumped required Java to 21 here ----
-["1.20.6"]
+["1.20.6-fabric"]
 mod.mc_compat = ">=1.20.5 <=1.20.6"
 mod.loader_compat = ">=0.15.11"      # verify
 mod.mc_releases = "1.20.5,1.20.6"
@@ -125,7 +125,7 @@ deps.modmenu = "10.0.0"              # confirmed on Modrinth
 deps.cloth_config = "14.0.126"
 
 # ---- 1.21-1.21.1: GuiGraphics era, legacy blit, Java 21 ----
-["1.21.1"]
+["1.21.1-fabric"]
 mod.mc_compat = ">=1.21 <=1.21.1"
 mod.loader_compat = ">=0.15.0"
 mod.mc_releases = "1.21,1.21.1"
@@ -135,7 +135,7 @@ deps.cloth_config = "15.0.140"      # confirmed on Modrinth
 mod.java_compat = ">=21"
 
 # ---- 1.21.2-1.21.4: GuiGraphics era, legacy blit, Java 21 ----
-["1.21.4"]
+["1.21.4-fabric"]
 mod.mc_compat = ">=1.21.2 <=1.21.4"
 mod.loader_compat = ">=0.16.5"       # verify
 mod.mc_releases = "1.21.2,1.21.3,1.21.4"
@@ -145,7 +145,7 @@ deps.modmenu = "13.0.2"
 deps.cloth_config = "17.0.144"       # corrected - Maven artifact versions never carry a +fabric suffix
 
 # ---- 1.21.5: RenderPipelines blit introduced (isolated tier), Java 21 ----
-["1.21.5"]
+["1.21.5-fabric"]
 mod.mc_compat = "~1.21.5"
 mod.loader_compat = ">=0.16.9"       # verify
 mod.mc_releases = "1.21.5"
@@ -156,7 +156,7 @@ deps.modmenu_from_modrinth = "true"  # terraformers maven 400'd on this jar in C
 deps.cloth_config = "18.0.145"       # corrected - Maven artifact versions never carry a +fabric suffix
 
 # ---- 1.21.6-1.21.8: new HUD API (HudElementRegistry), Java 21 ----
-["1.21.8"]
+["1.21.8-fabric"]
 mod.mc_compat = ">=1.21.6 <=1.21.8"
 mod.loader_compat = ">=0.16.0"
 mod.mc_releases = "1.21.6,1.21.7,1.21.8"
@@ -169,7 +169,7 @@ mod.java_compat = ">=21"
 # ---- 26.1.2: non-obfuscated Fabric (build.fabric26.gradle.kts), Java 25 ----
 # Fabric API's mod id is unconditionally "fabric-api" here (see the shared
 # mod.fabric_api_id default above; the pre-1.19.3 "fabric" alias is long gone).
-["26.1.2"]
+["26.1.2-fabric"]
 mod.mc_compat = "~26.1"
 mod.loader_compat = ">=0.16.0"
 mod.mc_releases = "26.1,26.1.1,26.1.2"
@@ -179,7 +179,7 @@ deps.cloth_config = "26.1.154"       # confirmed on maven.shedaniel.me (fabric a
 mod.java_compat = ">=25"
 
 # ---- 26.2: non-obfuscated Fabric, active/dev version, Java 25 ----
-["26.2"]
+["26.2-fabric"]
 mod.mc_compat = "~26.2"
 mod.loader_compat = ">=0.16.0"
 mod.mc_releases = "26.2"

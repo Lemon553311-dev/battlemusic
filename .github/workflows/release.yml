@@ -6,6 +6,16 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      publish_test:
+        description: >-
+          Also run the Modrinth publish step on every target, in dry-run mode
+          (MODRINTH_DRY_RUN=true - validates the token/project/config and
+          prints what would be uploaded, without actually uploading anything).
+          Use this to verify Modrinth publishing works before cutting a real
+          v* tag release.
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -20,20 +30,20 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - 1.16.5
-          - 1.17.1
-          - 1.18.2
-          - 1.19.2
-          - 1.19.4
-          - 1.20.1
-          - 1.20.4
-          - 1.20.6
-          - 1.21.1
-          - 1.21.4
-          - 1.21.5
-          - 1.21.8
-          - 26.1.2
-          - 26.2
+          - 1.16.5-fabric
+          - 1.17.1-fabric
+          - 1.18.2-fabric
+          - 1.19.2-fabric
+          - 1.19.4-fabric
+          - 1.20.1-fabric
+          - 1.20.4-fabric
+          - 1.20.6-fabric
+          - 1.21.1-fabric
+          - 1.21.4-fabric
+          - 1.21.5-fabric
+          - 1.21.8-fabric
+          - 26.1.2-fabric
+          - 26.2-fabric
           - 1.16.5-forge
           - 1.17.1-forge
           - 1.18.2-forge
@@ -99,15 +109,20 @@ jobs:
       # Published per-target, right after that target's own build, instead of
       # from a separate job - the Gradle project is already configured and
       # built here, so this avoids a second full rebuild just to publish.
+      # Runs on a real v* tag (real upload) OR a manual publish_test dispatch
+      # (dry run only - see MODRINTH_DRY_RUN below and the workflow_dispatch
+      # input description above).
       - name: Publish ${{ matrix.target }} to Modrinth
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish_test)
         run: ./gradlew ":${{ matrix.target }}:modrinth" --configure-on-demand --no-daemon --stacktrace
         env:
           MOD_VERSION: ${{ github.ref_name }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_test && 'true' || '' }}
 
   # Runs once, after every matrix job finishes, purely to assemble the GitHub
-  # Release from jars that are already built - no rebuilding here.
+  # Release from jars that are already built - no rebuilding here. Only on a
+  # real tag push (a manual publish_test dispatch never creates a release).
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/')

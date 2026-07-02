@@ -20,7 +20,7 @@ plugins {
 	id("com.modrinth.minotaur")
 }
 
-val mcVersion: String = project.name // "26.1.2" or "26.2" (no loader suffix on Fabric)
+val mcVersion: String = project.name.substringBeforeLast("-fabric") // "26.1.2" or "26.2"
 
 val modVersion: String = System.getenv("MOD_VERSION")
 	?.trim()?.removePrefix("v")?.takeIf { it.isNotEmpty() }

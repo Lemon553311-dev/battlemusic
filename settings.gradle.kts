@@ -64,7 +64,9 @@ stonecutter {
 		// See stonecutter.properties.toml and PORTING.md for the full behavior
 		// grouping (HUD API, blit call, registries, non-obf renames) per tier.
 		//
-		// ---- Fabric (unchanged names, so existing tooling keeps working) ----
+		// ---- Fabric (each project explicitly named "<mc>-fabric", matching the
+		// "<mc>-forge" / "<mc>-neoforge" naming convention below, so CI job names
+		// and Gradle project paths are unambiguous at a glance) ----
 		//   1.16.5  -> pre-GuiGraphics, pre-BuiltInRegistries, pre-Warden, Java 8
 		//   1.17.1  -> pre-GuiGraphics, Java 16
 		//   1.18.2  -> pre-GuiGraphics, Java 17
@@ -81,11 +83,21 @@ stonecutter {
 		// Stops at 1.21.8, the last obfuscated Minecraft release: Architectury
 		// Loom cannot build 26.1+ at all (see the dev.architectury.loom plugin
 		// comment above and PORTING.md round 8e).
-		versions(
-			"1.16.5", "1.17.1", "1.18.2", "1.19.2", "1.19.4",
-			"1.20.1", "1.20.4", "1.20.6",
-			"1.21.1", "1.21.4", "1.21.5", "1.21.8",
-		)
+		// version(name, mcVersion): the project is named "<mc>-fabric" but the
+		// preprocessor still sees the plain Minecraft version, exactly like the
+		// Forge/NeoForge entries below.
+		version("1.16.5-fabric", "1.16.5")
+		version("1.17.1-fabric", "1.17.1")
+		version("1.18.2-fabric", "1.18.2")
+		version("1.19.2-fabric", "1.19.2")
+		version("1.19.4-fabric", "1.19.4")
+		version("1.20.1-fabric", "1.20.1")
+		version("1.20.4-fabric", "1.20.4")
+		version("1.20.6-fabric", "1.20.6")
+		version("1.21.1-fabric", "1.21.1")
+		version("1.21.4-fabric", "1.21.4")
+		version("1.21.5-fabric", "1.21.5")
+		version("1.21.8-fabric", "1.21.8")
 
 		// ---- Forge (1.16.5 - 1.20.1) --------------------------------------
 		// version(name, version): the project is named "<mc>-forge" but the
@@ -117,12 +129,12 @@ stonecutter {
 		// build.gradle.kts, each applying exactly one loader-appropriate
 		// plugin: mainline Fabric Loom for Fabric, NeoForge's own ModDevGradle
 		// for NeoForge. See PORTING.md round 8f.
-		version("26.1.2", "26.1.2").buildscript = "build.fabric26.gradle.kts"
-		version("26.2", "26.2").buildscript = "build.fabric26.gradle.kts"
+		version("26.1.2-fabric", "26.1.2").buildscript = "build.fabric26.gradle.kts"
+		version("26.2-fabric", "26.2").buildscript = "build.fabric26.gradle.kts"
 		version("26.1.2-neoforge", "26.1.2").buildscript = "build.neoforge26.gradle.kts"
 		version("26.2-neoforge", "26.2").buildscript = "build.neoforge26.gradle.kts"
 
-		vcsVersion = "1.21.8"
+		vcsVersion = "1.21.8-fabric"
 	}
 }
 
