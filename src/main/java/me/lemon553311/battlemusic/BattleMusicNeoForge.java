@@ -38,8 +38,18 @@ public final class BattleMusicNeoForge {
 
 	public BattleMusicNeoForge(IEventBus modBus) {
 		// Dedicated servers get nothing - this is a client-side mod.
-		if (FMLEnvironment.dist != Dist.CLIENT) return;
-
+*///?}
+// NeoForge 21.9 (Minecraft 1.21.9) replaced the FMLEnvironment.dist field with
+// the FMLEnvironment.getDist() static getter (see neoforged.net/news/21.9release).
+// Every neoforge tier here below that boundary (up to 1.21.8) still needs the
+// old field; 26.1.2/26.2 are past it and need the new getter.
+//? if neoforge && >=26.1 {
+/*		if (FMLEnvironment.getDist() != Dist.CLIENT) return;
+*///?} elif neoforge {
+/*		if (FMLEnvironment.dist != Dist.CLIENT) return;
+*///?}
+//? if neoforge {
+/*
 		BattleMusicClient.init();
 
 		// Audio engine boots once the client exists (mod bus).

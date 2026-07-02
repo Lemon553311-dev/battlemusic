@@ -622,6 +622,36 @@ now use `from(tasks.jar, tasks.named("sourcesJar"))` for `buildAndCollect`
 files itself - no `.archiveFile` needed) and `uploadFile.set(tasks.jar)` for
 Modrinth, matching Minotaur's own documented usage exactly.
 
+## Round 8i - FMLEnvironment.dist removed in NeoForge 21.9 (Minecraft 1.21.9)
+
+With the jar-collection issue in round 8h fixed, Fabric 26.1.2/26.2 built
+clean, but both NeoForge 26.x tiers still failed - this time a genuine
+compile error, not a build-script accessor issue:
+
+```
+BattleMusicNeoForge.java:41: error: cannot find symbol
+	if (FMLEnvironment.dist != Dist.CLIENT) return;
+	                  ^
+symbol:   variable dist
+```
+
+Confirmed directly against NeoForged's own official release notes
+(neoforged.net/news/21.9release, "NeoForge 21.9 for Minecraft 1.21.9"):
+FMLEnvironment's FML-state refactor replaced the `dist` field with a static
+`getDist()` getter. Every NeoForge tier this project builds up to 1.21.8
+predates that change and needs the old field; 26.1.2/26.2 postdate it and
+need the new getter.
+
+**Fix:** split the single `if (FMLEnvironment.dist != Dist.CLIENT) return;`
+line into a version-gated pair in `BattleMusicNeoForge.java`:
+`//? if neoforge && >=26.1` uses `FMLEnvironment.getDist()`,
+`elif neoforge` keeps the old `FMLEnvironment.dist` field, following the same
+flat (non-nested) gate style already used for the ClientTickEvent import
+split earlier in the same file. Verified via both `emulate_stonecutter.py`
+(toggle equivalence) and `javac_check.py` (real compile) across all 28
+targets before shipping - both green, including 26.1.2-neoforge and
+26.2-neoforge specifically.
+
 Everything else follows the same pattern as rounds 3-7: if a tier fails to
 compile, the CI log will name the exact symbol, and the fix is a one-line gate
 adjustment in the affected file.
