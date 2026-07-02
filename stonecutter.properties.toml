@@ -251,7 +251,7 @@ mod.mc_compat = "1.19.4"
 mod.mc_releases = "1.19.4"
 mod.java_compat = ">=17"
 deps.forge = "45.4.0"
-deps.cloth_config = "10.1.135"       # verify - forge listing was truncated at this range
+deps.cloth_config = "10.1.135"       # confirmed on maven.shedaniel.me (forge artifact)
 mod.fml_range = "[45,)"
 mod.loader_range = "[45,)"
 mod.mc_range_maven = "[1.19.4]"
@@ -262,7 +262,7 @@ mod.mc_compat = "1.20.1"
 mod.mc_releases = "1.20.1"
 mod.java_compat = ">=17"
 deps.forge = "47.4.10"
-deps.cloth_config = "11.1.136"       # verify - forge listing was truncated at this range
+deps.cloth_config = "11.1.136"       # confirmed on maven.shedaniel.me (forge artifact)
 mod.fml_range = "[47,)"
 mod.loader_range = "[47,)"
 mod.mc_range_maven = "[1.20.1]"
@@ -287,7 +287,7 @@ mod.mc_compat = "1.20.4"
 mod.mc_releases = "1.20.4"
 mod.java_compat = ">=17"
 deps.neoforge = "20.4.237"           # confirmed final 1.20.4 build
-deps.cloth_config = "13.0.138"       # verify - neoforge artifact assumed to mirror fabric/forge numbering
+deps.cloth_config = "13.0.138"       # confirmed on maven.shedaniel.me (neoforge artifact)
 mod.loader_range = "[20.4,)"
 mod.mc_range_maven = "[1.20.4]"
 mod.pack_format = "22"
@@ -298,7 +298,7 @@ mod.mc_compat = "1.20.6"
 mod.mc_releases = "1.20.6"
 mod.java_compat = ">=21"
 deps.neoforge = "20.6.119"           # confirmed on maven.neoforged.net
-deps.cloth_config = "14.0.126"       # verify - neoforge artifact
+deps.cloth_config = "14.0.126"       # confirmed on maven.shedaniel.me (neoforge artifact)
 mod.loader_range = "[20.6,)"
 mod.mc_range_maven = "[1.20.6]"
 mod.pack_format = "32"
@@ -309,7 +309,7 @@ mod.mc_compat = "1.21.1"
 mod.mc_releases = "1.21.1"
 mod.java_compat = ">=21"
 deps.neoforge = "21.1.172"           # confirmed on maven.neoforged.net
-deps.cloth_config = "15.0.140"       # verify - neoforge artifact
+deps.cloth_config = "15.0.140"       # confirmed on maven.shedaniel.me (neoforge artifact)
 mod.loader_range = "[21.1,)"
 mod.mc_range_maven = "[1.21.1]"
 mod.pack_format = "34"
@@ -319,8 +319,8 @@ mod.client_side_only_line = "clientSideOnly=true"
 mod.mc_compat = "1.21.4"
 mod.mc_releases = "1.21.4"
 mod.java_compat = ">=21"
-deps.neoforge = "21.4.+"             # dynamic - resolves the newest published 21.4 build
-deps.cloth_config = "17.0.144"       # verify - neoforge artifact
+deps.neoforge = "21.4.157"           # confirmed via maven.neoforged.net latest-version API
+deps.cloth_config = "17.0.144"       # confirmed on maven.shedaniel.me (neoforge artifact)
 mod.loader_range = "[21.4,)"
 mod.mc_range_maven = "[1.21.4]"
 mod.pack_format = "46"
@@ -330,8 +330,8 @@ mod.client_side_only_line = "clientSideOnly=true"
 mod.mc_compat = "1.21.5"
 mod.mc_releases = "1.21.5"
 mod.java_compat = ">=21"
-deps.neoforge = "21.5.+"             # dynamic - resolves the newest published 21.5 build
-deps.cloth_config = "18.0.145"       # verify - neoforge artifact
+deps.neoforge = "21.5.97"            # confirmed via maven.neoforged.net latest-version API
+deps.cloth_config = "18.0.145"       # confirmed on maven.shedaniel.me (neoforge artifact)
 mod.loader_range = "[21.5,)"
 mod.mc_range_maven = "[1.21.5]"
 mod.pack_format = "55"
@@ -342,7 +342,7 @@ mod.mc_compat = "1.21.8"
 mod.mc_releases = "1.21.8"
 mod.java_compat = ">=21"
 deps.neoforge = "21.8.27"            # confirmed on maven.neoforged.net
-deps.cloth_config = "19.0.147"       # verify - neoforge artifact
+deps.cloth_config = "19.0.147"       # confirmed on maven.shedaniel.me (neoforge artifact)
 mod.loader_range = "[21.8,)"
 mod.mc_range_maven = "[1.21.8]"
 mod.pack_format = "64"               # verify
@@ -352,8 +352,8 @@ mod.client_side_only_line = "clientSideOnly=true"
 mod.mc_compat = "26.1.2"
 mod.mc_releases = "26.1.2"
 mod.java_compat = ">=25"
-deps.neoforge = "26.1.2.+"           # dynamic - NeoForge's 26.x scheme is <mc>.<build> (e.g. 26.1.0.1-beta)
-deps.cloth_config = "26.1.154"       # verify - neoforge artifact
+deps.neoforge = "26.1.2.76"          # confirmed via maven.neoforged.net latest-version API
+deps.cloth_config = "26.1.154"       # confirmed on maven.shedaniel.me (neoforge artifact)
 mod.loader_range = "[26.1.2,)"
 mod.mc_range_maven = "[26.1.2]"
 mod.pack_format = "80"               # verify
@@ -363,8 +363,8 @@ mod.client_side_only_line = "clientSideOnly=true"
 mod.mc_compat = "26.2"
 mod.mc_releases = "26.2"
 mod.java_compat = ">=25"
-deps.neoforge = "26.2.+"             # dynamic - 26.2.0.1-beta confirmed to exist
-deps.cloth_config = "26.2.155"       # verify - neoforge artifact
+deps.neoforge = "26.2.0.7-beta"      # confirmed via maven.neoforged.net latest-version API (newest 26.2 build; still beta)
+deps.cloth_config = "26.2.155"       # confirmed on maven.shedaniel.me (neoforge artifact)
 mod.loader_range = "[26.2,)"
 mod.mc_range_maven = "[26.2,)"
 mod.pack_format = "80"               # verify

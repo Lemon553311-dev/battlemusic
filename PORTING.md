@@ -366,21 +366,39 @@ for both loaders.
   listing timed out during verification, so all `cloth-config-neoforge` pins
   mirror the known shared numbering and are marked verify.
 
-### Verify list for the first real CI run (no compiler in this sandbox)
+### Verification status (updated after CI rounds 8a/8b + offline audit)
 
-1. `stonecutter parameters { constants.match(...) }` DSL shape against the
-   Stonecutter 0.9.6 docs; alternates: `constants["forge"] = ...` in the same
-   block, or `stonecutter { const("forge", ...) }` per-project in
-   `build.gradle.kts`.
-2. Architectury Loom version + 26.x (non-obf) support on all platforms.
-3. `cloth-config-neoforge` pins, `cloth-config-forge` 10.1.135 / 11.1.136.
-4. NeoForge 1.20.4 `ConfigScreenHandler` and 1.20.6 `IConfigScreenFactory`
-   availability; the `IConfigScreenFactory` lambda signature
-   `(ModContainer, Screen)` on 26.x.
-5. `pack_format` values for 1.21.8 / 26.1.2 / 26.2 (wrong values only warn on
-   modern loaders, but old-Forge tiers 6/7/8/9/13/15 matter and are correct).
-6. `clientSideOnly=true` placement in `neoforge.mods.toml` ([[mods]] entry).
-7. Forge `RenderGuiEvent.Post` getter names on 1.19.2 (`getPoseStack`).
+**Confirmed working by the 2026-07-02 CI runs:**
+- `version("<mc>-<loader>", "<mc>")` target registration (the deprecated
+  `vers()` alias is a hard error under Gradle's Kotlin script compiler).
+- The `stonecutter parameters { constants.match(...) }` loader-constant DSL.
+- Architectury Loom 1.17-SNAPSHOT resolves and configures the fabric platform
+  (1.16.5-1.21.4 tiers), ALL six Forge tiers (userdev resolved), and NeoForge
+  20.4.237 / 20.6.119 / 21.1.172.
+- Per-target `versions/<id>/gradle.properties` `loom.platform` switching.
+
+**Confirmed by direct maven / javadoc checks:**
+- Every `deps.neoforge` pin is now an exact version from the
+  maven.neoforged.net latest-version API (21.4.157, 21.5.97, 26.1.2.76,
+  26.2.0.7-beta). Gradle dynamic versions (`21.4.+`) DO NOT work for Loom
+  platform artifacts - that was the round-8b failure ("Could not resolve
+  Forge userdev").
+- Every `cloth-config-forge` and `cloth-config-neoforge` pin exists on
+  maven.shedaniel.me (full directory listings checked).
+- NeoForge `IConfigScreenFactory`: javadoc-confirmed
+  `createScreen(Minecraft, Screen)` + Supplier registration on 20.6/21.0;
+  gated to the `(ModContainer, Screen)` instance form from 1.21 on.
+- All 28 target expansions (14 fabric + 6 forge + 8 neoforge) pass a javac 25
+  parse with only missing-classpath diagnostics (no syntax/shape errors).
+
+**Still unverifiable offline (the remaining candidates if a tier fails):**
+1. Fabric 26.1.2 / 26.2 under Architectury Loom with no mappings call
+   (loom-back-compat handled non-obf internally; mainline loom should too).
+2. NeoForge 1.20.4 `ConfigScreenHandler` existence (removed later; believed
+   present in 20.4) and the exact `IConfigScreenFactory` shape on 26.x.
+3. Forge 1.19.x `RenderGuiEvent.Post#getPoseStack` exact getter name.
+4. `pack_format` values for 1.21.8 / 26.x (warn-only on modern loaders) and
+   `clientSideOnly=true` placement in `neoforge.mods.toml`.
 
 Everything else follows the same pattern as rounds 3-7: if a tier fails to
 compile, the CI log will name the exact symbol, and the fix is a one-line gate

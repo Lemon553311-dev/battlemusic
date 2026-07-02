@@ -8,8 +8,12 @@ package me.lemon553311.battlemusic.config;
 // Multi-version notes (Stonecutter //? directives, all flat - never nested):
 //   - 1.20.4: still the Forge-style ConfigScreenHandler.ConfigScreenFactory
 //     (in net.neoforged.neoforge.client).
-//   - 1.20.5+: replaced by the IConfigScreenFactory extension point registered
-//     on the mod container (net.neoforged.neoforge.client.gui).
+//   - 1.20.5-1.20.6: IConfigScreenFactory (net.neoforged.neoforge.client.gui),
+//     registered on the mod container as a Supplier; javadoc-confirmed
+//     signature createScreen(Minecraft, Screen).
+//   - 1.21+: IConfigScreenFactory's method became
+//     createScreen(ModContainer, Screen), registered as a direct instance
+//     (this is the shape the 21.x ConfigurationScreen::new example requires).
 
 //? if neoforge {
 /*import me.lemon553311.battlemusic.BattleMusicClient;
@@ -37,9 +41,12 @@ import net.neoforged.fml.ModLoadingContext;
 			return;
 		}
 *///?}
-//? if neoforge && >=1.20.5 {
+//? if neoforge && >=1.21 {
 /*		ModLoadingContext.get().getActiveContainer().registerExtensionPoint(
 				IConfigScreenFactory.class, (container, parent) -> ClothConfigScreen.build(parent));
+*///?} elif neoforge && >=1.20.5 {
+/*		ModLoadingContext.get().getActiveContainer().registerExtensionPoint(
+				IConfigScreenFactory.class, () -> (minecraft, parent) -> ClothConfigScreen.build(parent));
 *///?} elif neoforge {
 /*		ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
 				() -> new ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> ClothConfigScreen.build(parent)));
