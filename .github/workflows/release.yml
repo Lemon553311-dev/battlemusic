@@ -11,12 +11,49 @@ permissions:
   contents: write
 
 jobs:
+  # One job per Stonecutter target, running in parallel instead of one job
+  # building all 28 sequentially. Public repo on GitHub-hosted runners has no
+  # per-minute cost, only a concurrency cap (~20 jobs at once on the free
+  # tier), so this trades a single ~30 min job for a batch of few-minute jobs.
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - 1.16.5
+          - 1.17.1
+          - 1.18.2
+          - 1.19.2
+          - 1.19.4
+          - 1.20.1
+          - 1.20.4
+          - 1.20.6
+          - 1.21.1
+          - 1.21.4
+          - 1.21.5
+          - 1.21.8
+          - 26.1.2
+          - 26.2
+          - 1.16.5-forge
+          - 1.17.1-forge
+          - 1.18.2-forge
+          - 1.19.2-forge
+          - 1.19.4-forge
+          - 1.20.1-forge
+          - 1.20.4-neoforge
+          - 1.20.6-neoforge
+          - 1.21.1-neoforge
+          - 1.21.4-neoforge
+          - 1.21.5-neoforge
+          - 1.21.8-neoforge
+          - 26.1.2-neoforge
+          - 26.2-neoforge
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # The Stonecutter nodes target Java 17 / 21 / 25, so install all three.
+      # The Stonecutter nodes target Java 17 / 21 / 25 as a toolchain base;
+      # older per-tier JDKs (8, 16) are auto-downloaded by the foojay resolver.
       - name: Set up JDKs
         uses: actions/setup-java@v4
         with:
@@ -25,19 +62,21 @@ jobs:
             17
             21
             25
+          cache: gradle
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # buildAndCollect runs across every version subproject and copies the jars
-      # into build/libs/<mod version>/.
-      - name: Build all versions
+      # Builds and collects the jar(s) for ONLY this matrix target, instead of
+      # buildAndCollect (no target) which would build every registered version
+      # in this one job.
+      - name: Build ${{ matrix.target }}
         # On a v* tag, MOD_VERSION drives the mod version (e.g. v1.3.0 -> 1.3.0).
-        # On tagless pushes it is empty, so build.gradle.kts falls back to the
+        # On tagless pushes it is empty, so the build scripts fall back to the
         # mod.version in stonecutter.properties.toml.
-        run: ./gradlew buildAndCollect --continue --no-daemon --stacktrace
+        run: ./gradlew ":${{ matrix.target }}:buildAndCollect" --no-daemon --stacktrace
         env:
-          MOD_VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+          MOD_VERSION: ${{ github.ref_name }}
 
       - name: Collect jars
         run: |
@@ -46,27 +85,41 @@ jobs:
           rm -f release/*-sources.jar release/*-dev.jar release/*-dev-shadow.jar
           ls -la release
 
+      # One artifact per target (upload-artifact@v4 requires unique names
+      # across a run, unlike v3 which merged same-named uploads).
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: battlemusic-jars
+          name: battlemusic-jars-${{ matrix.target }}
           path: release/*.jar
           if-no-files-found: error
 
-      # On a v* tag: auto-create the GitHub Release with generated notes and the
-      # built jars attached. Created first so the release exists even if a later
-      # step errors.
-      - name: Create GitHub Release
+      # Published per-target, right after that target's own build, instead of
+      # from a separate job - the Gradle project is already configured and
+      # built here, so this avoids a second full rebuild just to publish.
+      - name: Publish ${{ matrix.target }} to Modrinth
         if: startsWith(github.ref, 'refs/tags/')
+        run: ./gradlew ":${{ matrix.target }}:modrinth" --no-daemon --stacktrace
+        env:
+          MOD_VERSION: ${{ github.ref_name }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+
+  # Runs once, after every matrix job finishes, purely to assemble the GitHub
+  # Release from jars that are already built - no rebuilding here.
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all built jars
+        uses: actions/download-artifact@v4
+        with:
+          pattern: battlemusic-jars-*
+          path: release
+          merge-multiple: true
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: release/*.jar
           generate_release_notes: true
-
-      # ...then publish those same jars to Modrinth.
-      - name: Publish to Modrinth
-        if: startsWith(github.ref, 'refs/tags/')
-        run: ./gradlew modrinth --no-daemon --stacktrace
-        env:
-          MOD_VERSION: ${{ github.ref_name }}
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
