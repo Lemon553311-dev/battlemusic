@@ -4,7 +4,7 @@ plugins {
 
 // The version that src/ is currently checked out against. The "Set active project
 // to ..." Gradle tasks rewrite this line - it is normally managed for you.
-stonecutter active "26.2"
+stonecutter active "1.21.8"
 
 // Loader constants for every build target. Java sources can gate on
 //   //? if fabric   //? if forge   //? if neoforge
