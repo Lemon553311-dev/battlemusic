@@ -503,6 +503,78 @@ used for every other tier here (add to `versions(...)`/`version(...)`, add a
 `stonecutter.properties.toml` section, no source changes needed since the
 Java-level `//? if >=26.1` gates were never removed).
 
+## Round 8f - 26.1+ support, done properly (Fabric AND NeoForge)
+
+Round 8e's conclusion ("drop 26.1+ for every loader") was the safe call at the
+time, but it was not actually necessary - it was a workaround for a self-
+inflicted problem (declaring two Loom-family plugins in one shared script),
+not a hard limitation of the ecosystem. A web search for how real, currently-
+maintained multiloader mods handle Minecraft 26.1+ turned up the actual
+answer: **Forge Config API Port** (a real, actively-published multiloader
+mod) explicitly migrated off Architectury Loom to "Fabric Loom and Mod Dev
+Gradle" specifically to support 26.1. That is exactly the split this project
+needed.
+
+**The fix:** Stonecutter supports giving individual registered versions their
+own build script file via `version(name, mcVersion).buildscript = "..."`
+(a documented feature - see the `rotgruengelb/stonecutter-mod-template`
+reference template, which uses exactly this mechanism to support 26.1.2
+alongside older obfuscated versions in one repo). This was the missing piece
+in round 8e: instead of cramming a second Loom plugin into the one script
+every other target shares, the four 26.1+ targets now get their own physically
+separate scripts, so their plugins never coexist with Architectury Loom's DSL
+at all:
+
+- `build.fabric26.gradle.kts` (new) - Fabric 26.1.2 and 26.2. Applies mainline
+  `net.fabricmc.fabric-loom` (plain, non-"apply false") in its non-obfuscated
+  mode: no `mappings(...)` call at all, since 26.1+ ships under real names
+  already. Otherwise mirrors `build.gradle.kts`'s fabric branch closely
+  (fabric-loader, fabric-api, modmenu with the same Modrinth-fallback flag,
+  cloth-config-fabric, fabric.mod.json templating, remapJar-based
+  buildAndCollect - the non-obf plugin still produces a `remapJar` task per
+  Fabric's own Loom docs, it just has nothing obfuscated left to remap).
+- `build.neoforge26.gradle.kts` (new) - NeoForge 26.1.2 and 26.2. Applies
+  `net.neoforged.moddev` (ModDevGradle), NeoForge's own official plugin,
+  confirmed via NeoForge's real 26.1 MDK to need no mappings step either.
+  Uses the `neoForge { version = ... }` block instead of a Loom-style
+  dependency notation, plain `implementation` instead of `modImplementation`
+  (ModDevGradle does not remap mod dependencies), and the standard `jar` task
+  (not `remapJar`) as the build output.
+- `settings.gradle.kts` registers all four targets with `.buildscript`
+  pointed at the matching file; every other target is untouched and still
+  uses the original `build.gradle.kts` with Architectury Loom exactly as it
+  did when that configuration last succeeded in CI.
+- `stonecutter.properties.toml` gets four new version sections (`26.1.2`,
+  `26.2`, `26.1.2-neoforge`, `26.2-neoforge`) using the same NeoForge/Cloth
+  Config/Fabric API/Mod Menu version pins researched (and confirmed against
+  live maven listings) in earlier rounds, which were previously written then
+  discarded when 26.1+ got dropped.
+
+**Net result:** all 28 original targets are back - 14 Fabric (1.16.5-1.21.8,
+26.1.2, 26.2), 6 Forge (1.16.5-1.20.1), 8 NeoForge (1.20.4-1.21.8, 26.1.2,
+26.2; 1.20.1 via the shared Forge jar).
+
+**Verification performed:** all 28 targets pass the Stonecutter directive-
+expansion emulator and a real javac parse (same method as every prior
+round) - this confirms the Java source and its `//? if` gates are correct for
+all four new targets (no source changes were needed; the `>=26.1` and
+neoforge/fabric loader branches already existed from the original port).
+
+**Could not be verified without running real Gradle (new risk surface):**
+1. The exact `net.neoforged.moddev` DSL shape in `build.neoforge26.gradle.kts`
+   - written from NeoForge's own README and MDK examples, but never executed.
+   The most likely rough edges: whether `neoForge { version = ... }` is
+   sufficient with no `runs {}` block (CI never runs the game, so this should
+   be fine, but the plugin may expect at least an empty block), and whether
+   `tasks.jar` / `tasks.sourcesJar` are the exact right task references.
+2. Mainline Fabric Loom 1.17.+ compatibility with both 26.1.2 and 26.2 (26.1.2
+   docs mention Loom 1.15 specifically; 1.17.+ is what 26.2 recommends - using
+   one dynamic version for both is a reasonable bet given Loom's non-obf line
+   is new and likely to stay compatible forward, but unconfirmed for 26.1.2).
+3. Whether ModDevGradle needs the NeoForge repositories plugin declared
+   separately in `settings.gradle.kts` (`net.neoforged.moddev.repositories`)
+   or auto-adds its own repositories (the README states the latter).
+
 **Still unverifiable offline (the remaining candidates if a tier fails):**
 1. Forge 1.19.x `RenderGuiEvent.Post#getPoseStack` exact getter name.
 2. `pack_format` value for 1.21.8 (warn-only on modern loaders).

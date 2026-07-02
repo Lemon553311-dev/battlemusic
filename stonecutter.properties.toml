@@ -39,7 +39,6 @@ mod.fabric_api_id = "fabric-api"
 # Fabric Loader itself is not Minecraft-version-specific, so one buildtime
 # loader works to compile every tier below.
 deps.fabric_loader = "0.19.3"
-loomx.loom_version = "1.17-SNAPSHOT"
 
 # ---- 1.16.x: pre-GuiGraphics, pre-BuiltInRegistries, pre-Warden-registry-move, Java 8 ----
 ["1.16.5"]
@@ -167,12 +166,27 @@ deps.modmenu_from_modrinth = "true"  # same flaky-host armor as 1.21.5 (jar name
 deps.cloth_config = "19.0.147"      # confirmed on Modrinth
 mod.java_compat = ">=21"
 
-# NOTE: 26.1.2 and 26.2 (Fabric) are intentionally NOT registered in
-# settings.gradle.kts. Architectury Loom cannot build Minecraft 26.1+ at all
-# (open upstream bug, architectury/architectury-loom#328 - it hard-requires a
-# mappings dependency that does not exist for non-obfuscated Minecraft).
-# Fabric coverage stops at 1.21.8, the last obfuscated release, matching
-# Forge/NeoForge. See PORTING.md round 8e for the full writeup.
+# ---- 26.1.2: non-obfuscated Fabric (build.fabric26.gradle.kts), Java 25 ----
+# Fabric API's mod id is unconditionally "fabric-api" here (see the shared
+# mod.fabric_api_id default above; the pre-1.19.3 "fabric" alias is long gone).
+["26.1.2"]
+mod.mc_compat = "~26.1"
+mod.loader_compat = ">=0.16.0"
+mod.mc_releases = "26.1,26.1.1,26.1.2"
+deps.fabric_api = "0.152.1+26.1.2"   # confirmed on Modrinth
+deps.modmenu = "18.0.0-beta.1"       # confirmed on Modrinth
+deps.cloth_config = "26.1.154"       # confirmed on maven.shedaniel.me (fabric artifact)
+mod.java_compat = ">=25"
+
+# ---- 26.2: non-obfuscated Fabric, active/dev version, Java 25 ----
+["26.2"]
+mod.mc_compat = "~26.2"
+mod.loader_compat = ">=0.16.0"
+mod.mc_releases = "26.2"
+deps.fabric_api = "0.152.2+26.2"     # confirmed on Modrinth
+deps.modmenu = "20.0.0-beta.3"       # confirmed on Modrinth
+deps.cloth_config = "26.2.155"       # confirmed on maven.shedaniel.me (fabric artifact)
+mod.java_compat = ">=25"
 
 # =============================================================================
 # Forge targets (1.16.5 - 1.20.1). Each project is named "<mc>-forge"; the
@@ -337,12 +351,29 @@ mod.mc_range_maven = "[1.21.8]"
 mod.pack_format = "64"               # verify
 mod.client_side_only_line = "clientSideOnly=true"
 
-# NOTE: 26.1.2-neoforge and 26.2-neoforge are intentionally NOT registered in
-# settings.gradle.kts. Architectury Loom (the plugin that gives NeoForge its
-# Forge-compatible build support) cannot build against Minecraft 26.1+ at
-# all - it hard-requires a mappings dependency that does not exist for
-# non-obfuscated Minecraft (open upstream bug,
-# architectury/architectury-loom#328, unresolved as of its latest 1.13
-# release). NeoForge coverage therefore stops at 1.21.8, the last obfuscated
-# release. See PORTING.md round 8d for the full writeup and what to try if
-# that upstream issue is ever fixed.
+# ---- 26.1.2-neoforge: non-obfuscated NeoForge (build.neoforge26.gradle.kts) ----
+# Uses ModDevGradle, not Architectury Loom (see build.neoforge26.gradle.kts
+# and PORTING.md round 8f for why). deps.neoforge here is a plain NeoForge
+# version (ModDevGradle's neoForge.version), not a Loom dependency notation.
+["26.1.2-neoforge"]
+mod.mc_compat = "26.1.2"
+mod.mc_releases = "26.1,26.1.1,26.1.2"
+deps.neoforge = "26.1.2.76"          # confirmed via maven.neoforged.net latest-version API
+deps.cloth_config = "26.1.154"       # confirmed on maven.shedaniel.me (neoforge artifact)
+mod.loader_range = "[26.1.2,)"
+mod.mc_range_maven = "[26.1.2]"
+mod.pack_format = "80"               # verify
+mod.client_side_only_line = "clientSideOnly=true"
+mod.java_compat = ">=25"
+
+# ---- 26.2-neoforge: non-obfuscated NeoForge, active/dev version ----
+["26.2-neoforge"]
+mod.mc_compat = "26.2"
+mod.mc_releases = "26.2"
+deps.neoforge = "26.2.0.7-beta"      # confirmed via maven.neoforged.net latest-version API (newest 26.2 build; still beta)
+deps.cloth_config = "26.2.155"       # confirmed on maven.shedaniel.me (neoforge artifact)
+mod.loader_range = "[26.2,)"
+mod.mc_range_maven = "[26.2,)"
+mod.pack_format = "80"               # verify
+mod.client_side_only_line = "clientSideOnly=true"
+mod.java_compat = ">=25"
