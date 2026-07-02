@@ -4,24 +4,39 @@ import me.lemon553311.battlemusic.BattleMusicClient;
 import me.lemon553311.battlemusic.config.BattleMusicConfig;
 import me.lemon553311.battlemusic.lasttotem.OneShotSound;
 
-//? if >=1.21.6 {
+//? if fabric && >=1.21.6 {
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
-//?} else {
+//?} elif fabric {
 /*import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+*///?} elif forge && >=1.19 {
+/*import net.minecraftforge.client.event.RenderGuiEvent;
+import net.minecraftforge.common.MinecraftForge;
+*///?} elif forge {
+/*import net.minecraftforge.client.event.RenderGameOverlayEvent;
+import net.minecraftforge.common.MinecraftForge;
+*///?} elif neoforge {
+/*import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.common.NeoForge;
 *///?}
 
 import net.minecraft.client.Minecraft;
 //? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
-//?} else {
+//?} elif >=1.20 {
 /*import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
+*///?} else {
+/*import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiComponent;
+import net.minecraft.resources.ResourceLocation;
 *///?}
-//? if >=1.21.5 {
+//? if >=1.21.6 {
 import net.minecraft.client.renderer.RenderPipelines;
-//?}
+//?} elif >=1.21.2 {
+/*import net.minecraft.client.renderer.RenderType;
+*///?}
 import net.minecraft.sounds.SoundSource;
 
 /**
@@ -36,10 +51,12 @@ import net.minecraft.sounds.SoundSource;
  * Multi-version notes (Stonecutter //? directives below):
  *   - HUD registration: HudElementRegistry on 1.21.6+, HudRenderCallback before.
  *   - Class names: Identifier/GuiGraphicsExtractor on 26.1+, ResourceLocation/
- *     GuiGraphics before (official Mojang mappings renamed these at the non-obf
- *     switch).
+ *     GuiGraphics on 1.20-1.21.x, ResourceLocation/PoseStack+GuiComponent
+ *     before 1.20 (official Mojang mappings renamed/removed these classes at
+ *     the GuiGraphics introduction and again at the non-obf switch).
  *   - Draw call: RenderPipelines blit overload on 1.21.5+, the legacy scaled
- *     GuiGraphics blit + RenderSystem tint before.
+ *     GuiGraphics blit + RenderSystem tint on 1.20-1.21.4, the PoseStack +
+ *     GuiComponent static blit helper (with a manual texture bind) before 1.20.
  */
 public final class LastHeartFeature {
 
@@ -77,15 +94,26 @@ public final class LastHeartFeature {
 	}
 
 	public void init() {
-		//? if >=1.21.6 {
+		// HUD hook per loader/version; the drawing itself is shared (onHudRender).
+		//? if fabric && >=1.21.6 {
 		// HudRenderCallback no longer exists in 1.21.6+. Register a HUD element
 		// that draws right before the chat layer, exactly like the totem overlay.
 		HudElementRegistry.attachElementBefore(
 				VanillaHudElements.CHAT,
 				mkId("last_heart_standing"),
 				(graphics, delta) -> onHudRender(graphics));
-		//?} else {
+		//?} elif fabric {
 		/*HudRenderCallback.EVENT.register((graphics, tickDelta) -> onHudRender(graphics));
+		*///?} elif forge && >=1.20 {
+		/*MinecraftForge.EVENT_BUS.addListener((RenderGuiEvent.Post e) -> onHudRender(e.getGuiGraphics()));
+		*///?} elif forge && >=1.19 {
+		/*MinecraftForge.EVENT_BUS.addListener((RenderGuiEvent.Post e) -> onHudRender(e.getPoseStack()));
+		*///?} elif forge {
+		/*MinecraftForge.EVENT_BUS.addListener((RenderGameOverlayEvent.Post e) -> {
+			if (e.getType() == RenderGameOverlayEvent.ElementType.ALL) onHudRender(e.getMatrixStack());
+		});
+		*///?} elif neoforge {
+		/*NeoForge.EVENT_BUS.addListener((RenderGuiEvent.Post e) -> onHudRender(e.getGuiGraphics()));
 		*///?}
 	}
 
@@ -112,8 +140,10 @@ public final class LastHeartFeature {
 
 	//? if >=26.1 {
 	private void onHudRender(GuiGraphicsExtractor graphics) {
-	//?} else {
+	//?} elif >=1.20 {
 	/*private void onHudRender(GuiGraphics graphics) {
+	*///?} else {
+	/*private void onHudRender(PoseStack matrices) {
 	*///?}
 		if (!animActive) return;
 		// If the feature was switched off mid-animation, stop drawing immediately.
@@ -151,8 +181,8 @@ public final class LastHeartFeature {
 		int a = Math.max(0, Math.min(255, Math.round(alpha * 255f)));
 		int color = (a << 24) | 0x00FFFFFF; // white tint, animated alpha (ARGB)
 
-		//? if >=1.21.5 {
-		// 1.21.5+ blit: (pipeline, texture, x, y, u, v, drawW, drawH,
+		//? if >=1.21.6 {
+		// 1.21.6+ blit: (pipeline, texture, x, y, u, v, drawW, drawH,
 		//                regionW, regionH, texW, texH, argbColor).
 		graphics.blit(
 				RenderPipelines.GUI_TEXTURED,
@@ -163,8 +193,21 @@ public final class LastHeartFeature {
 				IMG_W, IMG_H,
 				IMG_W, IMG_H,
 				color);
-		//?} else {
-		/*// Legacy (<1.21.5) scaled blit: tint via RenderSystem shader color.
+		//?} elif >=1.21.2 {
+		/*// 1.21.2-1.21.5 blit: same 13-arg shape, but the first parameter is a
+		// Function<ResourceLocation, RenderType> (RenderType::guiTextured) rather
+		// than a RenderPipeline. The RenderPipeline overload only exists in 1.21.6+.
+		graphics.blit(
+				RenderType::guiTextured,
+				IMAGE,
+				drawX, drawY,
+				0, 0,
+				drawW, drawH,
+				IMG_W, IMG_H,
+				IMG_W, IMG_H,
+				color);
+		*///?} elif >=1.20 {
+		/*// Legacy (1.20-1.21.4) scaled blit: tint via RenderSystem shader color.
 		// VERIFY on build - the GuiGraphics.blit overload shape shifted a few
 		// times across 1.20.1 / 1.21.0-1.21.4; see PORTING.md for the exact
 		// signatures per version if this does not resolve.
@@ -178,6 +221,38 @@ public final class LastHeartFeature {
 				IMG_W, IMG_H,
 				IMG_W, IMG_H);
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+		*///?} elif >=1.17 {
+		/*// 1.17-1.19.x: GuiGraphics does not exist yet, but the 1.17 RenderSystem
+		// shader API (setShaderTexture/setShaderColor) does. Draw via the PoseStack
+		// + GuiComponent static blit helper, tinting through the shader color.
+		com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, IMAGE);
+		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
+		GuiComponent.blit(
+				matrices,
+				drawX, drawY,
+				drawW, drawH,
+				0f, 0f,
+				IMG_W, IMG_H,
+				IMG_W, IMG_H);
+		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+		*///?} else {
+		/*// 1.16.5 (Java 8): the 1.17 RenderSystem shader API does not exist yet.
+		// Bind the texture via the TextureManager and tint with the legacy
+		// fixed-function color4f call, then use the same GuiComponent blit helper.
+		mc.getTextureManager().bind(IMAGE);
+		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+		com.mojang.blaze3d.systems.RenderSystem.color4f(1f, 1f, 1f, alpha);
+		GuiComponent.blit(
+				matrices,
+				drawX, drawY,
+				drawW, drawH,
+				0f, 0f,
+				IMG_W, IMG_H,
+				IMG_W, IMG_H);
+		com.mojang.blaze3d.systems.RenderSystem.color4f(1f, 1f, 1f, 1f);
 		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
 		*///?}
 	}

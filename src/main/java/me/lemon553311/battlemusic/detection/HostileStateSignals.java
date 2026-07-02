@@ -3,7 +3,9 @@ package me.lemon553311.battlemusic.detection;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.EnderMan;
+//? if >=1.19 {
 import net.minecraft.world.entity.monster.warden.Warden;
+//?}
 
 /**
  *
@@ -22,17 +24,21 @@ public final class HostileStateSignals {
 
 	public static boolean isObviouslyAggressive(Mob mob) {
 		// Creeper actively fusing toward an explosion.
-		if (mob instanceof Creeper creeper) {
+		if (mob instanceof Creeper) {
+			Creeper creeper = (Creeper) mob;
 			if (creeper.getSwellDir() > 0 || creeper.isIgnited()) return true;
 		}
 		// Enderman angry state is synced for the screaming animation.
-		if (mob instanceof EnderMan enderMan) {
+		if (mob instanceof EnderMan) {
+			EnderMan enderMan = (EnderMan) mob;
 			if (enderMan.isCreepy()) return true;
 		}
-		// Warden anger drives synced animations.
+		// Warden anger drives synced animations. Warden does not exist before 1.19.
+		//? if >=1.19 {
 		if (mob instanceof Warden) {
 			return true;
 		}
+		//?}
 		return false;
 	}
 }

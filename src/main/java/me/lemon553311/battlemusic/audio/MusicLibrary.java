@@ -4,6 +4,7 @@ import me.lemon553311.battlemusic.BattleMusicClient;
 import me.lemon553311.battlemusic.config.BattleMusicConfig;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -56,9 +57,9 @@ public class MusicLibrary {
 			Files.createDirectories(root.resolve(HEAVY_DIR));
 			Path readme = root.resolve("PUT_YOUR_MUSIC_HERE.txt");
 			if (!Files.exists(readme)) {
-				Files.writeString(readme,
-						"Drop .ogg files into 'Regular Battle' and 'Heavy Battle'.\n"
-								+ "The song will be picked at random if there's multiple files.");
+				Files.write(readme,
+						("Drop .ogg files into 'Regular Battle' and 'Heavy Battle'.\n"
+								+ "The song will be picked at random if there's multiple files.").getBytes(StandardCharsets.UTF_8));
 			}
 		} catch (IOException e) {
 			BattleMusicClient.LOGGER.warn("Could not create music folders", e);

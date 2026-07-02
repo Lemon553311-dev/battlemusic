@@ -1,0 +1,31 @@
+# NeoForge (>=1.20.5) mod metadata. ${...} values are filled by
+# processResources from stonecutter.properties.toml per tier. Excluded from
+# Fabric and Forge jars; NeoForge 1.20.4 uses META-INF/mods.toml instead.
+modLoader="javafml"
+loaderVersion="[1,)"
+license="MIT"
+issueTrackerURL="https://github.com/Lemon553311-dev/battlemusic/issues"
+
+[[mods]]
+modId="battlemusic"
+version="${version}"
+displayName="${name}"
+displayURL="https://modrinth.com/mod/battle-music"
+logoFile="assets/battlemusic/icon.png"
+authors="Lemon553311"
+description='''Plays your own imported music during fights! Client-side, smooth fades, dynamic changes, very customizable.'''
+${client_side_only_line}
+
+[[dependencies.battlemusic]]
+modId="neoforge"
+type="required"
+versionRange="${loader_range}"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.battlemusic]]
+modId="minecraft"
+type="required"
+versionRange="${mc_range_maven}"
+ordering="NONE"
+side="CLIENT"

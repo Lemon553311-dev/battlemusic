@@ -5,28 +5,51 @@ import me.lemon553311.battlemusic.audio.MusicLibrary;
 import me.lemon553311.battlemusic.config.BattleMusicConfig;
 import me.lemon553311.battlemusic.lasttotem.LastTotemFeature;
 import me.lemon553311.battlemusic.lastheart.LastHeartFeature;
+import me.lemon553311.battlemusic.platform.Platform;
 import me.lemon553311.battlemusic.state.BattleStateMachine;
 
+//? if fabric {
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.loader.api.FabricLoader;
+//?}
 
+import net.minecraft.client.Minecraft;
 
+//? if >=1.17 {
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+//?} else {
+/*import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+*///?}
 
 /**
+ * Loader-neutral core of the mod + the Fabric client entrypoint.
  *
+ * Multi-loader layout (Stonecutter //? fabric/forge/neoforge constants):
+ *   - Fabric: this class IS the entrypoint (ClientModInitializer) and wires
+ *     the Fabric lifecycle/tick/disconnect events to the static hooks below.
+ *   - Forge:    {@link BattleMusicForge} constructs everything via init() and
+ *     wires the equivalent Forge events to the same hooks.
+ *   - NeoForge: {@link BattleMusicNeoForge}, same idea.
+ * Everything the mod actually does lives behind the static hooks, so the three
+ * bootstraps stay tiny.
  *
  * im gonna lose my mind with this holy shit.
- *
  */
-
+//? if fabric {
 public class BattleMusicClient implements ClientModInitializer {
+//?} else {
+/*public class BattleMusicClient {
+*///?}
 	public static final String MOD_ID = "battlemusic";
+	//? if >=1.17 {
 	public static final Logger LOGGER = LoggerFactory.getLogger("BattleMusic");
+	//?} else {
+	/*public static final Logger LOGGER = LogManager.getLogger("BattleMusic");
+	*///?}
 	private static BattleMusicConfig config;
 	private static AudioEngine audioEngine;
 	private static MusicLibrary library;
@@ -34,11 +57,29 @@ public class BattleMusicClient implements ClientModInitializer {
 	private static LastTotemFeature lastTotem;
 	private static LastHeartFeature lastHeart;
 
+	//? if fabric {
 	@Override
 	public void onInitializeClient() {
+		init();
+
+		ClientLifecycleEvents.CLIENT_STARTED.register(client -> onClientStarted());
+		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> onClientStopping());
+		ClientTickEvents.END_CLIENT_TICK.register(BattleMusicClient::onEndClientTick);
+
+		//music mute on l;eave
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> onDisconnect());
+	}
+	//?}
+
+	/**
+	 * Loader-neutral startup: config, music library, audio engine, state
+	 * machine, and the secret features. Called once from the Fabric entrypoint
+	 * or the Forge/NeoForge mod constructors (client dist only).
+	 */
+	public static void init() {
 		config = BattleMusicConfig.load();
 		//dir regular/heavy battle
-		library = new MusicLibrary(FabricLoader.getInstance().getGameDir().resolve(MOD_ID));
+		library = new MusicLibrary(Platform.gameDir().resolve(MOD_ID));
 		library.ensureFolders();
 		library.rescan();
 
@@ -54,17 +95,6 @@ public class BattleMusicClient implements ClientModInitializer {
 		lastHeart = new LastHeartFeature(config);
 		lastHeart.init();
 
-		ClientLifecycleEvents.CLIENT_STARTED.register(client -> audioEngine.init());
-		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
-			stateMachine.reset();
-			audioEngine.shutdown();
-		});
-		ClientTickEvents.END_CLIENT_TICK.register(stateMachine::onClientTick);
-
-
-		//music mute on l;eave
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> stateMachine.reset());
-
 		// trying to figure out why tf it doesn't work
 		LOGGER.info("Battle Music initialised. Music folder: {} ({} regular, {} heavy track(s) found)",
 				library.getRootFolder(), library.regularCount(), library.heavyCount());
@@ -75,6 +105,27 @@ public class BattleMusicClient implements ClientModInitializer {
 				config.heavyHealthThreshold, config.bossRadius, config.requireLineOfSight,
 				config.playerDamageTriggerEnabled, config.playerDamageThresholdHp,
 				config.playerDamageWindowSeconds, config.playerCombatTimeoutSeconds);
+	}
+
+	/** The client finished starting up -> bring up the OpenAL audio engine. */
+	public static void onClientStarted() {
+		if (audioEngine != null) audioEngine.init();
+	}
+
+	/** The client is shutting down -> stop music and release OpenAL resources. */
+	public static void onClientStopping() {
+		if (stateMachine != null) stateMachine.reset();
+		if (audioEngine != null) audioEngine.shutdown();
+	}
+
+	/** End of every client tick -> drive the battle state machine. */
+	public static void onEndClientTick(Minecraft client) {
+		if (stateMachine != null) stateMachine.onClientTick(client);
+	}
+
+	/** Left a world/server -> stop the music immediately. */
+	public static void onDisconnect() {
+		if (stateMachine != null) stateMachine.reset();
 	}
 
 
