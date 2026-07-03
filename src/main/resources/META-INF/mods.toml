@@ -12,7 +12,11 @@ modId="battlemusic"
 version="${version}"
 displayName="${name}"
 displayURL="https://modrinth.com/mod/battle-music"
-logoFile="assets/battlemusic/icon.png"
+# Must be a bare filename at the JAR ROOT - no slashes. Forge's Mods screen
+# loads this via vanilla's root-resource lookup when the mod entry is clicked,
+# and that lookup throws IllegalArgumentException on any path containing '/'
+# (confirmed crash on 1.16.5; root filenames work on every version).
+logoFile="battlemusic_icon.png"
 authors="Lemon553311"
 description='''Plays your own imported music during fights! Client-side, smooth fades, dynamic changes, very customizable.'''
 ${display_test_line}

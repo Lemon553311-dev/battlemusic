@@ -96,7 +96,9 @@ tasks {
 		props.forEach { (key, value) -> inputs.property(key, value) }
 		filesMatching("fabric.mod.json") { expand(props) }
 		// Keep this jar's resources scoped to Fabric metadata only.
-		exclude("META-INF/mods.toml", "META-INF/neoforge.mods.toml", "pack.mcmeta")
+		// battlemusic_icon.png is the Forge/NeoForge mod-list logo; Fabric uses
+		// the assets path from fabric.mod.json.
+		exclude("META-INF/mods.toml", "META-INF/neoforge.mods.toml", "pack.mcmeta", "battlemusic_icon.png")
 	}
 
 	register<Copy>("buildAndCollect") {

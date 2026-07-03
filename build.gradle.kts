@@ -166,7 +166,10 @@ tasks {
 			"fabric" -> {
 				filesMatching("fabric.mod.json") { expand(props) }
 				// Keep Fabric jars byte-identical to the pre-multiloader ones.
-				exclude("META-INF/mods.toml", "META-INF/neoforge.mods.toml", "pack.mcmeta")
+				// battlemusic_icon.png is the Forge/NeoForge mod-list logo (root
+				// copy of assets/battlemusic/icon.png); Fabric uses the assets
+				// path from fabric.mod.json, so the root copy is dead weight here.
+				exclude("META-INF/mods.toml", "META-INF/neoforge.mods.toml", "pack.mcmeta", "battlemusic_icon.png")
 			}
 			"forge" -> {
 				filesMatching("META-INF/mods.toml") { expand(props) }

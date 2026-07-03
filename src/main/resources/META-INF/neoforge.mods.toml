@@ -11,7 +11,10 @@ modId="battlemusic"
 version="${version}"
 displayName="${name}"
 displayURL="https://modrinth.com/mod/battle-music"
-logoFile="assets/battlemusic/icon.png"
+# Bare filename at the JAR ROOT, matching mods.toml. Paths with '/' crash the
+# Mods screen on older Forge (confirmed on 1.16.5); a root filename is the one
+# form that works on every Forge and NeoForge version, so both files use it.
+logoFile="battlemusic_icon.png"
 authors="Lemon553311"
 description='''Plays your own imported music during fights! Client-side, smooth fades, dynamic changes, very customizable.'''
 ${client_side_only_line}
