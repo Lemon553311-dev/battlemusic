@@ -57,7 +57,7 @@ val modVersion: String = System.getenv("MOD_VERSION")
 // Fabric keeps the historical "<mod>+<mc>" scheme (published versions stay
 // stable); Forge/NeoForge jars get a loader suffix so file names and Modrinth
 // version numbers stay unique.
-version = if (loader == "fabric") "$modVersion+$mcVersion" else "$modVersion+$mcVersion-$loader"
+version = "$modVersion+$mcVersion-$loader"
 base.archivesName = property("mod.id") as String
 
 // Each Minecraft version requires a specific Java level.

@@ -28,7 +28,7 @@ val modVersion: String = System.getenv("MOD_VERSION")
 	?: property("mod.version") as String
 
 // Matches the historical Fabric "<mod>+<mc>" scheme used by build.gradle.kts.
-version = "$modVersion+$mcVersion"
+version = "$modVersion+$mcVersion-fabric"
 base.archivesName = property("mod.id") as String
 
 java {
