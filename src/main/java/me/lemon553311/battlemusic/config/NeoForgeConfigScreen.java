@@ -37,7 +37,10 @@ import net.neoforged.fml.ModLoadingContext;
 
 	// Registers the mods-list "Config" button when Cloth Config is installed.
 	public static void register() {
-		if (!ModList.get().isLoaded("cloth_config")) {
+		// Cloth Config's mod id is "cloth-config" (hyphen), same as on Forge -
+		// the old "cloth_config" (underscore) check never matched, silently
+		// disabling the Config button. Both spellings checked defensively.
+		if (!ModList.get().isLoaded("cloth-config") && !ModList.get().isLoaded("cloth_config")) {
 			BattleMusicClient.LOGGER.info(
 					"Cloth Config not installed - Battle Music's config screen is disabled "
 					+ "(edit config/battlemusic.json directly instead)");

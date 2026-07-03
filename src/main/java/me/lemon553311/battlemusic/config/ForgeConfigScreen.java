@@ -10,8 +10,11 @@ package me.lemon553311.battlemusic.config;
 //   - 1.17.1: ConfigGuiHandler.ConfigGuiFactory, in net.minecraftforge.fmlclient.
 //   - 1.18.2: ConfigGuiHandler.ConfigGuiFactory, moved to net.minecraftforge.client.
 //   - 1.19+ : renamed to ConfigScreenHandler.ConfigScreenFactory.
-//   - Forge's mod id for Cloth Config is "cloth_config" (underscore), unlike
-//     Fabric's "cloth-config".
+//   - Cloth Config's mod id on Forge is "cloth-config" (hyphen) - CONFIRMED
+//     from a real 1.16.5 crash report's mod list (cloth-config-4.17.101-forge).
+//     An earlier "cloth_config" (underscore) guess here silently disabled the
+//     Config button even with Cloth Config installed. Both spellings are
+//     checked defensively; Fabric's id is "cloth-config2" (ModMenuIntegration).
 
 //? if forge {
 /*import me.lemon553311.battlemusic.BattleMusicClient;
@@ -41,7 +44,7 @@ public final class ForgeConfigScreen {
 
 	// Registers the mods-list "Config" button when Cloth Config is installed.
 	public static void register() {
-		if (!ModList.get().isLoaded("cloth_config")) {
+		if (!ModList.get().isLoaded("cloth-config") && !ModList.get().isLoaded("cloth_config")) {
 			BattleMusicClient.LOGGER.info(
 					"Cloth Config not installed - Battle Music's config screen is disabled "
 					+ "(edit config/battlemusic.json directly instead)");
