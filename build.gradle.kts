@@ -281,8 +281,17 @@ tasks.register<net.darkhax.curseforgegradle.TaskPublishCurseForge>("publishCurse
 	// the buildtime Minecraft version, not the full supported range.
 	disableVersionDetection()
 
+	// NOTE: everything read from stonecutter.properties.toml in this block MUST
+	// be qualified as project.property(...). Inside tasks.register<...> {} the
+	// lambda receiver is the TASK, and Gradle's Task interface has its own
+	// property(String) method, so a bare property(...) looks the key up on the
+	// task and fails with "Could not get unknown property ... for task ... of
+	// type TaskPublishCurseForge". This never bit the modrinth {} block because
+	// extensions have no property() method, so the call falls through to the
+	// project there. Caught by the first real CURSEFORGE_DRY_RUN (task
+	// registration is lazy, so plain builds never configured this task).
 	val mainFile = upload(
-		property("mod.curseforge_id") as String,
+		project.property("mod.curseforge_id") as String,
 		tasks.remapJar.flatMap { it.archiveFile }
 	)
 	mainFile.displayName = "Battle Music $modVersion ($mcVersion, $loader)"
@@ -293,7 +302,7 @@ tasks.register<net.darkhax.curseforgegradle.TaskPublishCurseForge>("publishCurse
 	// Same game-version tags as Modrinth. CurseForge uses the same version
 	// names for both the 1.x and the new 26.x scheme (verified via their
 	// site's version filters).
-	(property("mod.mc_releases") as String).split(",").map { it.trim() }
+	(project.property("mod.mc_releases") as String).split(",").map { it.trim() }
 		.forEach { mainFile.addGameVersion(it) }
 
 	when (loader) {
@@ -314,7 +323,7 @@ tasks.register<net.darkhax.curseforgegradle.TaskPublishCurseForge>("publishCurse
 	// Java tag, only for majors confirmed to exist in CurseForge's tag list
 	// (an unknown tag fails upload validation; run the publish_test dry run
 	// after adding new ones).
-	val javaMajor = (property("mod.java_compat") as String).removePrefix(">=").trim()
+	val javaMajor = (project.property("mod.java_compat") as String).removePrefix(">=").trim()
 	if (javaMajor in listOf("8", "16", "17", "21")) {
 		mainFile.addJavaVersion("Java $javaMajor")
 	}

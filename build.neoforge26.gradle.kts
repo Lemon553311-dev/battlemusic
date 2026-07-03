@@ -144,8 +144,11 @@ tasks.register<net.darkhax.curseforgegradle.TaskPublishCurseForge>("publishCurse
 	debugMode = System.getenv("CURSEFORGE_DRY_RUN") == "true"
 	disableVersionDetection()
 
+	// project.property(...) qualification is REQUIRED here - see the note in
+	// build.gradle.kts's publishCurseforge block (bare property() resolves
+	// against the task, not the project, and fails at configuration time).
 	val mainFile = upload(
-		property("mod.curseforge_id") as String,
+		project.property("mod.curseforge_id") as String,
 		tasks.jar.flatMap { it.archiveFile }
 	)
 	mainFile.displayName = "Battle Music $modVersion ($mcVersion, neoforge)"
@@ -153,7 +156,7 @@ tasks.register<net.darkhax.curseforgegradle.TaskPublishCurseForge>("publishCurse
 	mainFile.changelogType = "markdown"
 	mainFile.changelog = System.getenv("CHANGELOG") ?: "See the GitHub release for changes."
 
-	(property("mod.mc_releases") as String).split(",").map { it.trim() }
+	(project.property("mod.mc_releases") as String).split(",").map { it.trim() }
 		.forEach { mainFile.addGameVersion(it) }
 	mainFile.addModLoader("NeoForge")
 	// Required on all new Minecraft files from 2026-07-15; this mod is client-only.
