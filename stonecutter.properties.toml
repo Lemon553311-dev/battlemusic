@@ -26,7 +26,7 @@ mod.modrinth_id = "battle-music"
 # CurseForge project to publish to. This must be the NUMERIC project id shown
 # in the "About Project" box on the CurseForge project page (NOT the slug).
 # TODO: replace with your real id after creating the project on CurseForge.
-mod.curseforge_id = "000000"
+mod.curseforge_id = "1595905"
 
 # Fabric API version range for fabric.mod.json's depends block. Kept at "*"
 # (any version) so older modpacks running older Fabric API builds are not
