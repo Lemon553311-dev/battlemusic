@@ -311,6 +311,12 @@ mod.loader_range = "[20.4,)"
 mod.mc_range_maven = "[1.20.4]"
 mod.pack_format = "22"
 mod.display_test_line = "displayTest=\"IGNORE_ALL_VERSION\""
+# mods.toml loaderVersion (javafml). REQUIRED: this tier uses mods.toml (the
+# neoforge.mods.toml switch happened at 1.20.5), and a missing fml_range
+# expanded to loaderVersion="" - an unparseable range that made NeoForge
+# 1.20.4 silently drop the whole jar from the mod list. "[1,)" matches any
+# javafml version >= 1, which covers every NeoForge build.
+mod.fml_range = "[1,)"
 
 ["1.20.6-neoforge"]
 mod.mc_compat = "1.20.6"
@@ -376,8 +382,12 @@ mod.mc_compat = "26.1.2"
 mod.mc_releases = "26.1,26.1.1,26.1.2"
 deps.neoforge = "26.1.2.76"          # confirmed via maven.neoforged.net latest-version API
 deps.cloth_config = "26.1.154"       # confirmed on maven.shedaniel.me (neoforge artifact)
-mod.loader_range = "[26.1.2,)"
-mod.mc_range_maven = "[26.1.2]"
+# Ranges must cover ALL of mod.mc_releases (26.1, 26.1.1, 26.1.2), matching
+# the Fabric 26.1.2 tier's "~26.1". They previously pinned exactly 26.1.2 /
+# NeoForge >=26.1.2, so players on 26.1 or 26.1.1 (NeoForge 26.1.0.x/26.1.1.x)
+# who downloaded this "compatible" file got a dependency error screen.
+mod.loader_range = "[26.1,)"
+mod.mc_range_maven = "[26.1,26.1.2]"
 mod.pack_format = "80"               # verify
 mod.client_side_only_line = "clientSideOnly=true"
 mod.java_compat = ">=25"
