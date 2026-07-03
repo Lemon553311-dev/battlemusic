@@ -10,12 +10,11 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.SourceDataLine;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.lwjgl.stb.STBVorbis.*;
@@ -27,8 +26,14 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * This deliberately reuses the exact decode/playback approach proven in
  * {@link me.lemon553311.battlemusic.audio.MusicChannel} (STB Vorbis -> Java
  * Sound on a daemon thread), so it does not depend on Minecraft's OpenAL sound
- * engine or its sound-event registry at all. The bundled .ogg is extracted from
- * the jar to a temp file once, then streamed at a fixed gain until it ends.
+ * engine or its sound-event registry at all.
+ *
+ * The bundled .ogg is read from the jar into memory once and decoded with
+ * stb_vorbis_open_memory. It is deliberately NOT extracted to a temp file:
+ * stb_vorbis_open_filename goes through C fopen(), which on Windows expects
+ * the legacy ANSI codepage, so a non-ASCII Windows user name (e.g. a Cyrillic
+ * account -> C:\Users\&lt;name&gt;\AppData\Local\Temp\...) made the alert fail
+ * to open silently. Decoding from memory has no file path to break.
  */
 public final class OneShotSound {
 	private OneShotSound() {}
@@ -37,9 +42,9 @@ public final class OneShotSound {
 	// Default alert used by the no-resource play(gain) overload (Last Totem Standing).
 	private static final String RESOURCE = "/assets/battlemusic/lts/LRS_StartSound.ogg";
 
-	// On-disk copies of bundled oggs, keyed by classpath resource path (STB needs a
-	// filesystem path, not a stream). Each distinct sound is extracted to temp once.
-	private static final ConcurrentHashMap<String, Path> EXTRACTED = new ConcurrentHashMap<>();
+	// In-memory copies of the bundled oggs, keyed by classpath resource path.
+	// Each distinct sound is read from the jar once (they are small).
+	private static final ConcurrentHashMap<String, byte[]> LOADED = new ConcurrentHashMap<>();
 
 	/** Play the default Last Totem Standing alert once at the given gain (0..1). */
 	public static void play(float gain) {
@@ -55,8 +60,8 @@ public final class OneShotSound {
 		final float g = Math.max(0f, Math.min(1f, gain));
 		Thread t = new Thread(() -> {
 			try {
-				Path ogg = ensureExtracted(resource);
-				if (ogg != null) stream(ogg, g);
+				byte[] data = ensureLoaded(resource);
+				if (data != null) stream(resource, data, g);
 			} catch (Throwable th) {
 				BattleMusicClient.LOGGER.warn("[lts] one-shot sound failed for {}", resource, th);
 			}
@@ -65,36 +70,43 @@ public final class OneShotSound {
 		t.start();
 	}
 
-	private static Path ensureExtracted(String resource) throws Exception {
-		Path cached = EXTRACTED.get(resource);
-		if (cached != null && Files.isReadable(cached)) return cached;
+	private static byte[] ensureLoaded(String resource) throws Exception {
+		byte[] cached = LOADED.get(resource);
+		if (cached != null) return cached;
 		synchronized (OneShotSound.class) {
-			cached = EXTRACTED.get(resource);
-			if (cached != null && Files.isReadable(cached)) return cached;
+			cached = LOADED.get(resource);
+			if (cached != null) return cached;
 			try (InputStream in = OneShotSound.class.getResourceAsStream(resource)) {
 				if (in == null) {
 					BattleMusicClient.LOGGER.warn("[lts] bundled sound not found on classpath at {}", resource);
 					return null;
 				}
-				Path tmp = Files.createTempFile("battlemusic-oneshot-", ".ogg");
-				Files.copy(in, tmp, StandardCopyOption.REPLACE_EXISTING);
-				tmp.toFile().deleteOnExit();
-				EXTRACTED.put(resource, tmp);
-				return tmp;
+				// InputStream#readAllBytes is Java 9+; the 1.16.5 tier builds on Java 8.
+				ByteArrayOutputStream out = new ByteArrayOutputStream(64 * 1024);
+				byte[] buf = new byte[8192];
+				int n;
+				while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+				byte[] data = out.toByteArray();
+				LOADED.put(resource, data);
+				return data;
 			}
 		}
 	}
 
-	private static void stream(Path path, float gain) {
+	private static void stream(String label, byte[] data, float gain) {
 		long decoder = NULL;
 		SourceDataLine line = null;
 		ShortBuffer pcm = null;
+		ByteBuffer encoded = null;
 
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			IntBuffer error = stack.mallocInt(1);
-			decoder = stb_vorbis_open_filename(path.toAbsolutePath().toString(), error, null);
+			encoded = MemoryUtil.memAlloc(data.length);
+			encoded.put(data);
+			encoded.flip();
+			decoder = stb_vorbis_open_memory(encoded, error, null);
 			if (decoder == NULL) {
-				BattleMusicClient.LOGGER.warn("[lts] STB open failed for {} (err {})", path, error.get(0));
+				BattleMusicClient.LOGGER.warn("[lts] STB open failed for {} (err {})", label, error.get(0));
 				return;
 			}
 
@@ -109,7 +121,7 @@ public final class OneShotSound {
 				info.free();
 			}
 			if (channels < 1 || channels > 2) {
-				BattleMusicClient.LOGGER.warn("[lts] unsupported channel count {} in {}", channels, path);
+				BattleMusicClient.LOGGER.warn("[lts] unsupported channel count {} in {}", channels, label);
 				return;
 			}
 
@@ -140,7 +152,7 @@ public final class OneShotSound {
 			line.drain();
 
 		} catch (Throwable t) {
-			BattleMusicClient.LOGGER.warn("[lts] playback error for {}", path, t);
+			BattleMusicClient.LOGGER.warn("[lts] playback error for {}", label, t);
 		} finally {
 			if (pcm != null) {
 				try { MemoryUtil.memFree(pcm); } catch (Throwable ignored) {}
@@ -150,6 +162,11 @@ public final class OneShotSound {
 			}
 			if (decoder != NULL) {
 				try { stb_vorbis_close(decoder); } catch (Throwable ignored) {}
+			}
+			if (encoded != null) {
+				// Freed only after the decoder is closed: stb reads from this
+				// buffer for the decoder's whole lifetime.
+				try { MemoryUtil.memFree(encoded); } catch (Throwable ignored) {}
 			}
 		}
 	}

@@ -210,7 +210,25 @@ public class BattleStateMachine {
 		// If a non-looping track ended mid-battle, roll another one.
 		refreshFinishedTracks();
 
+		// Vanilla's own background music knows nothing about ours and would
+		// happily start a track mid-battle, playing on top of the battle music.
+		// While any battle channel is audible, keep vanilla's music stopped
+		// (no-op when vanilla isn't playing anything).
+		suppressVanillaMusic(client);
+
 		tickChannels(dt);
+	}
+
+	private void suppressVanillaMusic(Minecraft client) {
+		// Not compiled on the non-obfuscated 26.1+ tiers: the music-manager API
+		// names there are unverified (same territory as the other non-obf
+		// renames), so those targets keep the old behavior (vanilla music can
+		// overlap) until someone confirms the 26.1+ name.
+		//? if <26.1 {
+		if (regularChannel.isAudible() || heavyChannel.isAudible()) {
+			client.getMusicManager().stopPlaying();
+		}
+		//?}
 	}
 
 	private void startBattle(LocalPlayer player, boolean boss, boolean playerCombatHot, int count) {
@@ -352,7 +370,9 @@ public class BattleStateMachine {
 			// re-roll to a different heavy track when we can
 			Path nowPlaying = regularChannel.getLoaded();
 			if (track != null && track.equals(nowPlaying) && library.heavyCount() > 1) {
-				for (int i = 0; i < 6 && track.equals(nowPlaying); i++) track = library.pickHeavy();
+				// track != null guard inside the loop: the pickers can return null
+				// if every heavy track got blacklisted as undecodable mid-battle.
+				for (int i = 0; i < 6 && track != null && track.equals(nowPlaying); i++) track = library.pickHeavy();
 			}
 			BattleMusicClient.debug("engageHeavy: phase=HEAVY, track={}", track == null ? "<none>" : track.getFileName());
 		}

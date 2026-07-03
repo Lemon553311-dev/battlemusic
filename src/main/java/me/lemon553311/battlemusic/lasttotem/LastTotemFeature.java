@@ -3,20 +3,38 @@ package me.lemon553311.battlemusic.lasttotem;
 import me.lemon553311.battlemusic.BattleMusicClient;
 import me.lemon553311.battlemusic.config.BattleMusicConfig;
 
+//? if fabric {
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-//? if >=1.21.6 {
+//?}
+//? if fabric && >=1.21.6 {
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
-//?} else {
+//?} elif fabric {
 /*import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+*///?} elif forge && >=1.19 {
+/*import net.minecraftforge.client.event.RenderGuiEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+*///?} elif forge {
+/*import net.minecraftforge.client.event.RenderGameOverlayEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+*///?} elif neoforge && >=1.20.5 {
+/*import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.common.NeoForge;
+*///?} elif neoforge {
+/*import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.TickEvent;
 *///?}
 
 import net.minecraft.client.Minecraft;
 //? if >=26.1 {
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-//?} elif >=1.20 {
-/*import net.minecraft.client.gui.GuiGraphics;
-*///?} else {
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
+*///?} elif >=1.20 {
+import net.minecraft.client.gui.GuiGraphics;
+//?} else {
 /*import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiComponent;
 *///?}
@@ -27,10 +45,10 @@ import net.minecraft.client.renderer.RenderPipelines;
 /*import net.minecraft.client.renderer.RenderType;
 *///?}
 //? if >=26.1 {
-import net.minecraft.resources.Identifier;
-//?} else {
-/*import net.minecraft.resources.ResourceLocation;
-*///?}
+/*import net.minecraft.resources.Identifier;
+*///?} else {
+import net.minecraft.resources.ResourceLocation;
+//?}
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -62,10 +80,10 @@ public final class LastTotemFeature {
 
 	// Bundled at assets/battlemusic/textures/gui/last_totem_standing.png
 	//? if >=26.1 {
-	private static final Identifier IMAGE = mkId("textures/gui/last_totem_standing.png");
-	//?} else {
-	/*private static final ResourceLocation IMAGE = mkId("textures/gui/last_totem_standing.png");
-	*///?}
+	/*private static final Identifier IMAGE = mkId("textures/gui/last_totem_standing.png");
+	*///?} else {
+	private static final ResourceLocation IMAGE = mkId("textures/gui/last_totem_standing.png");
+	//?}
 	// Native pixel size of that PNG, used for aspect-correct scaling.
 	private static final int IMG_W = 1023;
 	private static final int IMG_H = 667;
@@ -94,16 +112,42 @@ public final class LastTotemFeature {
 	}
 
 	public void init() {
+		// Tick source per loader; the totem-counting logic itself is shared
+		// (onClientTick) and loader-neutral.
+		//? if fabric {
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
-		//? if >=1.21.6 {
+		//?} elif forge {
+		/*MinecraftForge.EVENT_BUS.addListener((TickEvent.ClientTickEvent e) -> {
+			if (e.phase == TickEvent.Phase.END) onClientTick(Minecraft.getInstance());
+		});
+		*///?} elif neoforge && >=1.20.5 {
+		/*NeoForge.EVENT_BUS.addListener((ClientTickEvent.Post e) -> onClientTick(Minecraft.getInstance()));
+		*///?} else {
+		/*NeoForge.EVENT_BUS.addListener((TickEvent.ClientTickEvent e) -> {
+			if (e.phase == TickEvent.Phase.END) onClientTick(Minecraft.getInstance());
+		});
+		*///?}
+
+		// HUD hook per loader/version; the drawing itself is shared (onHudRender).
+		//? if fabric && >=1.21.6 {
 		// HudRenderCallback no longer exists in 1.21.6+. Register a HUD element
 		// instead; it draws right before the chat layer.
 		HudElementRegistry.attachElementBefore(
 				VanillaHudElements.CHAT,
 				mkId("last_totem_standing"),
 				(graphics, delta) -> onHudRender(graphics));
-		//?} else {
+		//?} elif fabric {
 		/*HudRenderCallback.EVENT.register((graphics, tickDelta) -> onHudRender(graphics));
+		*///?} elif forge && >=1.20 {
+		/*MinecraftForge.EVENT_BUS.addListener((RenderGuiEvent.Post e) -> onHudRender(e.getGuiGraphics()));
+		*///?} elif forge && >=1.19 {
+		/*MinecraftForge.EVENT_BUS.addListener((RenderGuiEvent.Post e) -> onHudRender(e.getPoseStack()));
+		*///?} elif forge {
+		/*MinecraftForge.EVENT_BUS.addListener((RenderGameOverlayEvent.Post e) -> {
+			if (e.getType() == RenderGameOverlayEvent.ElementType.ALL) onHudRender(e.getMatrixStack());
+		});
+		*///?} elif neoforge {
+		/*NeoForge.EVENT_BUS.addListener((RenderGuiEvent.Post e) -> onHudRender(e.getGuiGraphics()));
 		*///?}
 	}
 
@@ -178,10 +222,10 @@ public final class LastTotemFeature {
 	}
 
 	//? if >=26.1 {
-	private void onHudRender(GuiGraphicsExtractor graphics) {
-	//?} elif >=1.20 {
-	/*private void onHudRender(GuiGraphics graphics) {
-	*///?} else {
+	/*private void onHudRender(GuiGraphicsExtractor graphics) {
+	*///?} elif >=1.20 {
+	private void onHudRender(GuiGraphics graphics) {
+	//?} else {
 	/*private void onHudRender(PoseStack matrices) {
 	*///?}
 		if (!animActive) return;
@@ -291,15 +335,21 @@ public final class LastTotemFeature {
 	}
 
 	//? if >=26.1 {
-	private static Identifier mkId(String path) {
+	/*private static Identifier mkId(String path) {
 		return Identifier.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
 	}
-	//?} elif >=1.21 {
-	/*private static ResourceLocation mkId(String path) {
+	*///?} elif >=1.21 {
+	private static ResourceLocation mkId(String path) {
 		return ResourceLocation.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
 	}
-	*///?} else {
-	/*private static ResourceLocation mkId(String path) {
+	//?} else {
+	/*// The 2-arg ResourceLocation constructor is deprecated-for-removal on
+	// newer Minecraft, but it is the only option pre-1.21 (fromNamespaceAndPath
+	// does not exist yet there) - suppressed rather than left as noise, since
+	// these pre-1.21 tiers are pinned and will never see this code updated out
+	// from under them.
+	@SuppressWarnings({"deprecation", "removal"})
+	private static ResourceLocation mkId(String path) {
 		return new ResourceLocation(BattleMusicClient.MOD_ID, path);
 	}
 	*///?}

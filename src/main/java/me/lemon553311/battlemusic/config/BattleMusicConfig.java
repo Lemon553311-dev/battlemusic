@@ -1,8 +1,7 @@
 package me.lemon553311.battlemusic.config;
 
 import me.lemon553311.battlemusic.BattleMusicClient;
-
-import net.fabricmc.loader.api.FabricLoader;
+import me.lemon553311.battlemusic.platform.Platform;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -154,7 +153,8 @@ public class BattleMusicConfig {
 
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static Path path() {
-		return FabricLoader.getInstance().getConfigDir().resolve("battlemusic.json");
+		// Loader-neutral: FabricLoader on Fabric, FMLPaths on Forge/NeoForge.
+		return Platform.configDir().resolve("battlemusic.json");
 	}
 
 	@SuppressWarnings("null")
