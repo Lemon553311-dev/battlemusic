@@ -266,13 +266,18 @@ public class MusicChannel {
 			if (seekFrame <= 0L && startSeconds > 0.0) {
 				seekFrame = (long) (startSeconds * sampleRate);
 			}
+			// All playbackFrame writes on this thread are guarded by alive.get():
+			// a stale thread that loses a stopThread() race can still be blocked
+			// inside line.write() for up to ~0.2s, and an unguarded write after
+			// that clobbered the frame a freshly started playback had just set,
+			// corrupting the battle-resume position of the NEW track.
 			if (seekFrame > 0L) {
 				if (!stb_vorbis_seek(decoder, (int) seekFrame)) {
 					BattleMusicClient.debug("[{}] seek to frame {} failed; starting from 0", name, seekFrame);
 					stb_vorbis_seek_start(decoder);
-					playbackFrame = 0L;
+					if (alive.get()) playbackFrame = 0L;
 				} else {
-					playbackFrame = seekFrame;
+					if (alive.get()) playbackFrame = seekFrame;
 					BattleMusicClient.debug("[{}] starting at frame {}", name, seekFrame);
 				}
 			}
@@ -302,7 +307,7 @@ public class MusicChannel {
 					if (loop && !justLooped) {
 						BattleMusicClient.debug("[{}] looping {}", name, path.getFileName());
 						stb_vorbis_seek_start(decoder);
-						playbackFrame = 0L;
+						if (alive.get()) playbackFrame = 0L;
 						justLooped = true;
 						continue;
 					}
@@ -319,7 +324,7 @@ public class MusicChannel {
 				}
 				justLooped = false;
 
-				playbackFrame = stb_vorbis_get_sample_offset(decoder);
+				if (alive.get()) playbackFrame = stb_vorbis_get_sample_offset(decoder);
 				int sampleCount = n * channels;
 				float gain = currentGain * outputVolume * trackGain;
 				if (gain < 0f) gain = 0f;
