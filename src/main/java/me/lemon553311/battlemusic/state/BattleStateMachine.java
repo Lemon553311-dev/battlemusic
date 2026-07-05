@@ -64,6 +64,11 @@ public class BattleStateMachine {
 	private Path resumeHeavyFile = null;
 	private long resumeHeavyFrame = 0L;
 	private long resumeStampNanos = 0L;
+	// phase the battle was in when the resume point was taken. a battle that ended in
+	// HEAVY must CONTINUE as heavy when the resume condition is met; without this flag
+	// startBattle() re-evaluated heavy/regular from scratch and rolled a random regular
+	// track instead of continuing the faded-out heavy one.
+	private boolean resumeWasHeavy = false;
 
 	private long lastTickNanos = 0L;
 	private double debugAccum = 0.0;
@@ -275,6 +280,13 @@ public class BattleStateMachine {
 			if (!playerCombatHot) notifyHeavyFromLowHp();
 		} else if (playerCombatHot) {
 			engageHeavy(true);
+		} else if (resumeWasHeavy && canResume(resumeHeavyFile)) {
+			// The previous battle ended in HEAVY and we are re-starting within the resume
+			// window: continue that heavy track (engageHeavy resumes resumeHeavyFile at its
+			// remembered frame) instead of rolling a random regular song. engageHeavy also
+			// re-latches heavy, so the continued battle stays heavy like it was.
+			BattleMusicClient.debug("BATTLE RESUME: previous battle ended in HEAVY; continuing the heavy track instead of picking a regular one");
+			engageHeavy(true);
 		} else {
 			engageRegular(true);
 		}
@@ -465,6 +477,9 @@ public class BattleStateMachine {
 
 	private void rememberResumePoint() {
 		if (!config.battleResumeEnabled) return;
+		// Taken while `phase` is still live (beginFadeOut only resets it to IDLE after
+		// this call), so it records what the battle actually was when it faded out.
+		resumeWasHeavy = (phase == Phase.HEAVY);
 		boolean remembered = false;
 		if (regularChannel.isLoaded()) {
 			resumeRegularFile = regularChannel.getLoaded();
@@ -612,6 +627,7 @@ public class BattleStateMachine {
 		resumeRegularFile = null;
 		resumeHeavyFile = null;
 		resumeStampNanos = 0L;
+		resumeWasHeavy = false;
 		aggro.clear();
 		damage.clear();
 		bosses.clear();
@@ -635,6 +651,7 @@ public class BattleStateMachine {
 		resumeRegularFile = null;
 		resumeHeavyFile = null;
 		resumeStampNanos = 0L;
+		resumeWasHeavy = false;
 		aggro.clear();
 		damage.clear();
 		bosses.clear();
