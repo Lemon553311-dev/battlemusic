@@ -141,6 +141,18 @@ public class MusicLibrary {
 		return heavy.size();
 	}
 
+	// Counts that EXCLUDE files blacklisted as undecodable this session. The pickers
+	// only ever choose from these, so loop/re-roll decisions must use them too: with
+	// the raw counts, a folder holding one playable and one broken file reported "2",
+	// so the lone playable track got loop=false and played with a restart gap between
+	// repeats instead of looping seamlessly.
+	public synchronized int playableRegularCount() {
+		return playable(regular).size();
+	}
+	public synchronized int playableHeavyCount() {
+		return playable(heavy).size();
+	}
+
 	// Snapshots of the current track lists (used by the mod-menu Songs tab).
 	public synchronized List<Path> regularTracks() {
 		return new ArrayList<>(regular);

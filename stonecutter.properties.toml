@@ -222,17 +222,23 @@ mod.java_compat = ">=25"
 # =============================================================================
 
 ["1.16.5-forge"]
-mod.mc_compat = "1.16.5"
-mod.mc_releases = "1.16.5"
+# Range widened: 1.16.4 and 1.16.5 are obfuscation/SRG-identical (1.16.5 was a
+# crash-fix release), so the same jar runs on Forge 35 (1.16.4) and 36 (1.16.5).
+# 1.16-1.16.3 stay out: those are separate Forge majors (32-34) with older SRG
+# snapshots and were never verified.
+mod.mc_compat = "1.16.4 1.16.5"
+mod.mc_releases = "1.16.4,1.16.5"
 mod.java_compat = ">=8"
 deps.forge = "36.2.34"
 deps.cloth_config = "4.16.91"        # confirmed on maven.shedaniel.me (forge artifact)
-mod.fml_range = "[36,)"
-mod.loader_range = "[36,)"
-mod.mc_range_maven = "[1.16.5]"
+mod.fml_range = "[35,)"
+mod.loader_range = "[35,)"
+mod.mc_range_maven = "[1.16.4,1.16.5]"
 mod.pack_format = "6"
 
 ["1.17.1-forge"]
+# Stays single-version: Forge never shipped a release for 1.17.0 at all
+# (Forge 37 targets 1.17.1 only), so there is nothing else to cover.
 mod.mc_compat = "1.17.1"
 mod.mc_releases = "1.17.1"
 mod.java_compat = ">=16"
@@ -244,6 +250,10 @@ mod.mc_range_maven = "[1.17.1]"
 mod.pack_format = "7"
 
 ["1.18.2-forge"]
+# Stays single-version ON PURPOSE: 1.18/1.18.1 Forge (majors 38/39) predate
+# the fmllegacy -> net.minecraftforge.network package move this code's
+# "forge && >=1.18" gate compiles against, and 1.18.2 changed registries.
+# Widening this one is NOT safe without a real test on 1.18/1.18.1.
 mod.mc_compat = "1.18.2"
 mod.mc_releases = "1.18.2"
 mod.java_compat = ">=17"
@@ -255,36 +265,45 @@ mod.mc_range_maven = "[1.18.2]"
 mod.pack_format = "8"
 
 ["1.19.2-forge"]
-mod.mc_compat = "1.19.2"
-mod.mc_releases = "1.19.2"
+# Range widened to 1.19-1.19.2 (Forge 41/42/43), matching the Fabric tier: the
+# vanilla API surface this tier compiles against is identical across the three
+# (see the tier grouping at the top), SRG ids are stable within the family, and
+# the one Forge API this code gates on for 1.19 (ClientPlayerNetworkEvent
+# rename) landed at Forge 41 (1.19.0). Client-only mod, no protocol concerns.
+mod.mc_compat = ">=1.19 <=1.19.2"
+mod.mc_releases = "1.19,1.19.1,1.19.2"
 mod.java_compat = ">=17"
 deps.forge = "43.5.0"
 deps.cloth_config = "8.3.115"        # confirmed (forge artifact)
-mod.fml_range = "[43,)"
-mod.loader_range = "[43,)"
-mod.mc_range_maven = "[1.19.2]"
+mod.fml_range = "[41,)"
+mod.loader_range = "[41,)"
+mod.mc_range_maven = "[1.19,1.19.2]"
 mod.pack_format = "9"
 
 ["1.19.4-forge"]
-mod.mc_compat = "1.19.4"
-mod.mc_releases = "1.19.4"
+# Range widened to 1.19.3-1.19.4 (Forge 44/45), matching the Fabric tier's
+# grouping (same vanilla API surface, stable SRG ids, client-only mod).
+mod.mc_compat = ">=1.19.3 <=1.19.4"
+mod.mc_releases = "1.19.3,1.19.4"
 mod.java_compat = ">=17"
 deps.forge = "45.4.0"
 deps.cloth_config = "10.1.135"       # confirmed on maven.shedaniel.me (forge artifact)
-mod.fml_range = "[45,)"
-mod.loader_range = "[45,)"
-mod.mc_range_maven = "[1.19.4]"
+mod.fml_range = "[44,)"
+mod.loader_range = "[44,)"
+mod.mc_range_maven = "[1.19.3,1.19.4]"
 mod.pack_format = "13"
 
 ["1.20.1-forge"]
-mod.mc_compat = "1.20.1"
-mod.mc_releases = "1.20.1"
+# Range widened to 1.20-1.20.1 (Forge 46/47), matching the Fabric tier's
+# grouping. (This jar additionally runs on NeoForge 1.20.1; see build.gradle.kts.)
+mod.mc_compat = ">=1.20 <=1.20.1"
+mod.mc_releases = "1.20,1.20.1"
 mod.java_compat = ">=17"
 deps.forge = "47.4.10"
 deps.cloth_config = "11.1.136"       # confirmed on maven.shedaniel.me (forge artifact)
-mod.fml_range = "[47,)"
-mod.loader_range = "[47,)"
-mod.mc_range_maven = "[1.20.1]"
+mod.fml_range = "[46,)"
+mod.loader_range = "[46,)"
+mod.mc_range_maven = "[1.20,1.20.1]"
 mod.pack_format = "15"
 
 # =============================================================================
@@ -302,13 +321,18 @@ mod.pack_format = "15"
 # =============================================================================
 
 ["1.20.4-neoforge"]
-mod.mc_compat = "1.20.4"
-mod.mc_releases = "1.20.4"
+# Range widened to 1.20.2-1.20.4 (NeoForge 20.2/20.3/20.4), matching the Fabric
+# tier's grouping. NeoForge runs on official (Mojang) mappings at runtime from
+# 20.2 onward, so one jar covers the whole family; net.neoforged packages and
+# the "neoforge" mod id both exist from 20.2, and mods.toml (not
+# neoforge.mods.toml) is correct for this whole range (the switch is at 1.20.5).
+mod.mc_compat = ">=1.20.2 <=1.20.4"
+mod.mc_releases = "1.20.2,1.20.3,1.20.4"
 mod.java_compat = ">=17"
 deps.neoforge = "20.4.237"           # confirmed final 1.20.4 build
 deps.cloth_config = "13.0.138"       # confirmed on maven.shedaniel.me (neoforge artifact)
-mod.loader_range = "[20.4,)"
-mod.mc_range_maven = "[1.20.4]"
+mod.loader_range = "[20.2,)"
+mod.mc_range_maven = "[1.20.2,1.20.4]"
 mod.pack_format = "22"
 mod.display_test_line = "displayTest=\"IGNORE_ALL_VERSION\""
 # mods.toml loaderVersion (javafml). REQUIRED: this tier uses mods.toml (the
@@ -319,39 +343,46 @@ mod.display_test_line = "displayTest=\"IGNORE_ALL_VERSION\""
 mod.fml_range = "[1,)"
 
 ["1.20.6-neoforge"]
-mod.mc_compat = "1.20.6"
-mod.mc_releases = "1.20.6"
+# Range widened to 1.20.5-1.20.6 (NeoForge 20.5/20.6); 1.20.6 was a hotfix of
+# 1.20.5, same API surface (matches the Fabric tier).
+mod.mc_compat = ">=1.20.5 <=1.20.6"
+mod.mc_releases = "1.20.5,1.20.6"
 mod.java_compat = ">=21"
 deps.neoforge = "20.6.119"           # confirmed on maven.neoforged.net
 deps.cloth_config = "14.0.126"       # confirmed on maven.shedaniel.me (neoforge artifact)
-mod.loader_range = "[20.6,)"
-mod.mc_range_maven = "[1.20.6]"
+mod.loader_range = "[20.5,)"
+mod.mc_range_maven = "[1.20.5,1.20.6]"
 mod.pack_format = "32"
 mod.client_side_only_line = "clientSideOnly=true"
 
 ["1.21.1-neoforge"]
-mod.mc_compat = "1.21.1"
-mod.mc_releases = "1.21.1"
+# Range widened to 1.21-1.21.1 (NeoForge 21.0/21.1), matching the Fabric tier.
+mod.mc_compat = ">=1.21 <=1.21.1"
+mod.mc_releases = "1.21,1.21.1"
 mod.java_compat = ">=21"
 deps.neoforge = "21.1.172"           # confirmed on maven.neoforged.net
 deps.cloth_config = "15.0.140"       # confirmed on maven.shedaniel.me (neoforge artifact)
-mod.loader_range = "[21.1,)"
-mod.mc_range_maven = "[1.21.1]"
+mod.loader_range = "[21,)"
+mod.mc_range_maven = "[1.21,1.21.1]"
 mod.pack_format = "34"
 mod.client_side_only_line = "clientSideOnly=true"
 
 ["1.21.4-neoforge"]
-mod.mc_compat = "1.21.4"
-mod.mc_releases = "1.21.4"
+# Range widened to 1.21.2-1.21.4 (NeoForge 21.2/21.3/21.4), matching the Fabric
+# tier's grouping (same GuiGraphics/legacy-blit API surface across the family).
+mod.mc_compat = ">=1.21.2 <=1.21.4"
+mod.mc_releases = "1.21.2,1.21.3,1.21.4"
 mod.java_compat = ">=21"
 deps.neoforge = "21.4.157"           # confirmed via maven.neoforged.net latest-version API
 deps.cloth_config = "17.0.144"       # confirmed on maven.shedaniel.me (neoforge artifact)
-mod.loader_range = "[21.4,)"
-mod.mc_range_maven = "[1.21.4]"
+mod.loader_range = "[21.2,)"
+mod.mc_range_maven = "[1.21.2,1.21.4]"
 mod.pack_format = "46"
 mod.client_side_only_line = "clientSideOnly=true"
 
 ["1.21.5-neoforge"]
+# Stays single-version: 1.21.5 is an isolated tier (RenderPipelines blit was
+# introduced here and the HUD API changed again at 1.21.6), same as on Fabric.
 mod.mc_compat = "1.21.5"
 mod.mc_releases = "1.21.5"
 mod.java_compat = ">=21"
@@ -363,13 +394,15 @@ mod.pack_format = "55"
 mod.client_side_only_line = "clientSideOnly=true"
 
 ["1.21.8-neoforge"]
-mod.mc_compat = "1.21.8"
-mod.mc_releases = "1.21.8"
+# Range widened to 1.21.6-1.21.8 (NeoForge 21.6/21.7/21.8), matching the Fabric
+# tier's grouping (new HUD + RenderPipelines blit across the whole family).
+mod.mc_compat = ">=1.21.6 <=1.21.8"
+mod.mc_releases = "1.21.6,1.21.7,1.21.8"
 mod.java_compat = ">=21"
 deps.neoforge = "21.8.27"            # confirmed on maven.neoforged.net
 deps.cloth_config = "19.0.147"       # confirmed on maven.shedaniel.me (neoforge artifact)
-mod.loader_range = "[21.8,)"
-mod.mc_range_maven = "[1.21.8]"
+mod.loader_range = "[21.6,)"
+mod.mc_range_maven = "[1.21.6,1.21.8]"
 mod.pack_format = "64"               # verify
 mod.client_side_only_line = "clientSideOnly=true"
 
