@@ -1,7 +1,5 @@
 # Minecraft Battle Music mod for Fabric
 
-<iframe src="https://github.com/sponsors/Lemon553311-dev/button" title="Sponsor Lemon553311-dev" height="32" width="114" style="border: 0; border-radius: 6px;"></iframe>
-
 This mod plays your imported music during mob/PVP battles.
 
 **Version support: Minecraft 1.16.5 - 26.2 (Fabric/Forge/NeoForge)**
