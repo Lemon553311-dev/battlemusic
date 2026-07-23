@@ -23,10 +23,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- *
- * Approximates how many hostile mobs are aggroed on the player.
- *
- * i dont fucking know
+ * Approximates how many hostile mobs are aggroed on the player by tracking
+ * their movement, aim, and attack signals within the detection radius.
  */
 
 public class AggroTracker {

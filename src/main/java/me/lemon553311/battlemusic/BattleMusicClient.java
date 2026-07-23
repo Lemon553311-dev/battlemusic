@@ -37,7 +37,7 @@ import org.apache.logging.log4j.Logger;
  * Everything the mod actually does lives behind the static hooks, so the three
  * bootstraps stay tiny.
  *
- * im gonna lose my mind with this holy shit.
+ * Loader-neutral core of the mod + the Fabric client entrypoint.
  */
 //? if fabric {
 public class BattleMusicClient implements ClientModInitializer {
@@ -129,7 +129,7 @@ public class BattleMusicClient implements ClientModInitializer {
 	}
 
 
-	//DEBUGG
+	// Debug-level logging gated by config.debug
 	public static void debug(String format, Object... args) {
 		BattleMusicConfig c = config;
 		if (c != null && c.debug) {
