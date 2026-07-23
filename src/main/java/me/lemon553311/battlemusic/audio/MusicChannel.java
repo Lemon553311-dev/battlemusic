@@ -21,7 +21,6 @@ import static org.lwjgl.stb.STBVorbis.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 /**
- *
  * One playback voice. Streams an Ogg Vorbis file on its own daemon thread: it
  * decodes a small chunk at a time with STB Vorbis (the decoder LWJGL/Minecraft
  * already ships), scales the samples by the current (faded) gain, and writes
@@ -68,7 +67,7 @@ public class MusicChannel {
 		this.name = name;
 	}
 
-    // Load + start from the beginning. Resets gain to 0.
+	// Load + start from the beginning. Resets gain to 0.
 	public boolean start(Path oggPath, boolean loop) {
 		return start(oggPath, loop, 0L, 0.0);
 	}
@@ -258,10 +257,10 @@ public class MusicChannel {
 				return;
 			}
 
-            // Battle resume uses a frame offset; the per-song "start at" uses
-            // seconds, converted to frames now that we know the sample rate. A
-            // resume frame always wins over start-at seconds. If the seek fails
-            // (e.g. the file changed length), fall back to the start.
+			// Battle resume uses a frame offset; the per-song "start at" uses
+			// seconds, converted to frames now that we know the sample rate. A
+			// resume frame always wins over start-at seconds. If the seek fails
+			// (e.g. the file changed length), fall back to the start.
 			long seekFrame = startFrame;
 			if (seekFrame <= 0L && startSeconds > 0.0) {
 				seekFrame = (long) (startSeconds * sampleRate);

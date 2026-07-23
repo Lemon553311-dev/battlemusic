@@ -8,7 +8,6 @@ import net.minecraft.world.entity.monster.warden.Warden;
 //?}
 
 /**
- *
  * A few mob types leak their aggressive state through synced entity data, so we
  * can read them directly instead of guessing from movement. These are treated
  * as strong "definitely aggroed" signals.

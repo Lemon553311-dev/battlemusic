@@ -36,8 +36,6 @@ import org.apache.logging.log4j.Logger;
  *   - NeoForge: {@link BattleMusicNeoForge}, same idea.
  * Everything the mod actually does lives behind the static hooks, so the three
  * bootstraps stay tiny.
- *
- * im gonna lose my mind with this holy shit.
  */
 //? if fabric {
 public class BattleMusicClient implements ClientModInitializer {
@@ -66,7 +64,7 @@ public class BattleMusicClient implements ClientModInitializer {
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> onClientStopping());
 		ClientTickEvents.END_CLIENT_TICK.register(BattleMusicClient::onEndClientTick);
 
-		//music mute on l;eave
+		// Stop the music when leaving a world/server.
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> onDisconnect());
 	}
 	//?}
@@ -83,7 +81,7 @@ public class BattleMusicClient implements ClientModInitializer {
 		library.ensureFolders();
 		library.rescan();
 
-        //audio engine
+		// Audio engine + the state machine that drives it.
 		audioEngine = new AudioEngine();
 		stateMachine = new BattleStateMachine(config, audioEngine, library);
 
@@ -95,7 +93,7 @@ public class BattleMusicClient implements ClientModInitializer {
 		lastHeart = new LastHeartFeature(config);
 		lastHeart.init();
 
-		// trying to figure out why tf it doesn't work
+		// Startup summary: what was found and the effective config.
 		LOGGER.info("Battle Music initialised. Music folder: {} ({} regular, {} heavy track(s) found)",
 				library.getRootFolder(), library.regularCount(), library.heavyCount());
 		LOGGER.info("Battle Music config: enabled={}, debug={}, aggroMobCount={}, detectionRadius={}, "
@@ -129,7 +127,7 @@ public class BattleMusicClient implements ClientModInitializer {
 	}
 
 
-	//DEBUGG
+	// Debug log helper; prints only when config.debug is enabled.
 	public static void debug(String format, Object... args) {
 		BattleMusicConfig c = config;
 		if (c != null && c.debug) {

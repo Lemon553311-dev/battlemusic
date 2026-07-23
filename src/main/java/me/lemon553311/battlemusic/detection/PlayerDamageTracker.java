@@ -16,7 +16,6 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
- *
  * Estimates how much damage the LOCAL PLAYER has recently RECEIVED FROM ANOTHER
  * PLAYER (PvP), using only client-visible data.
  *

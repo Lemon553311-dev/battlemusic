@@ -19,13 +19,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
+ * Central battle state machine: consumes the detection signals once per client tick
+ * and drives the two music channels through the IDLE / REGULAR / HEAVY phases, with
+ * fades, grace timers, death handling, and battle resume.
  *
  * @author Lemon553311
  * @author uxokpro1234
  * @author user2378
- * 
- * it actually gets worse! 
- * 
  */
 
 public class BattleStateMachine {
@@ -55,7 +55,7 @@ public class BattleStateMachine {
 	// battle started from the pvp trigger with pool=BOTH: re-rolls in REGULAR phase keep
 	// picking from both folders.
 	private boolean regularUsesBothPool = false;
-	// track music for pvp n shit
+	// battle was started by the PvP trigger; suppresses the low-HP upgrade to HEAVY.
 	private boolean pvpPoolBattle = false;
 
 	// resume battle
@@ -140,7 +140,7 @@ public class BattleStateMachine {
 			return;
 		}
 		if (playerWasDead) {
-			//stop music kthx
+			// Player respawned: cut the held death-screen music and clear battle state.
 			playerWasDead = false;
 			stopForRespawn();
 			tickChannels(dt);
@@ -652,29 +652,21 @@ public class BattleStateMachine {
 	// smooth. bosses.clear() only drops the throttle cache (NOT the configured boss ids) so
 	// a fast respawn can't read a stale boss hit from where you died.
 	private void stopForRespawn() {
-		regularChannel.hardStop();
-		heavyChannel.hardStop();
-		phase = Phase.IDLE;
-		battleActive = false;
-		heavyLatched = false;
-		regularUsesBothPool = false;
-		pvpPoolBattle = false;
-		graceSecondsLeft = 0.0;
-		playerCombatSecondsLeft = 0.0;
-		playerCombatWasHot = false;
-		deathHoldSecondsLeft = 0.0;
-		resumeRegularFile = null;
-		resumeHeavyFile = null;
-		resumeStampNanos = 0L;
-		resumeWasHeavy = false;
-		aggro.clear();
-		damage.clear();
-		bosses.clear();
+		clearBattleState();
 	}
 
 	// Called on disconnect: silence everything and reset state.
 	public void reset() {
 		BattleMusicClient.debug("reset(): disconnect/world unload, silencing everything");
+		clearBattleState();
+		playerWasDead = false;
+		lastTickNanos = 0L;
+	}
+
+	// Shared teardown for respawn + disconnect: silence both channels and drop all
+	// battle, timer, and resume state. bosses.clear() only drops the boss-hit throttle
+	// cache (NOT the configured boss ids).
+	private void clearBattleState() {
 		regularChannel.hardStop();
 		heavyChannel.hardStop();
 		phase = Phase.IDLE;
@@ -686,7 +678,6 @@ public class BattleStateMachine {
 		playerCombatSecondsLeft = 0.0;
 		playerCombatWasHot = false;
 		deathHoldSecondsLeft = 0.0;
-		playerWasDead = false;
 		resumeRegularFile = null;
 		resumeHeavyFile = null;
 		resumeStampNanos = 0L;
@@ -694,7 +685,6 @@ public class BattleStateMachine {
 		aggro.clear();
 		damage.clear();
 		bosses.clear();
-		lastTickNanos = 0L;
 	}
 
 	// Re-read config-derived state (called when the settings screen saves).
@@ -702,5 +692,3 @@ public class BattleStateMachine {
 		bosses.refreshExtraIds();
 	}
 }
-
-// easter egg

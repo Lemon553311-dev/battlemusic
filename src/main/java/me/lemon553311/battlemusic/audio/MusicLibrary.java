@@ -266,7 +266,7 @@ public class MusicLibrary {
 	 * edits do NOT touch it — fine for us). Cheap stat keeps the "drop new files
 	 * in mid-session" UX without paying disk I/O on every battle start.
 	 */
-    public synchronized boolean rescanIfChanged() {
+	public synchronized boolean rescanIfChanged() {
 		long regMtime = folderMtime(root.resolve(REGULAR_DIR));
 		long hvyMtime = folderMtime(root.resolve(HEAVY_DIR));
 		if (regMtime == lastRegularMtime && hvyMtime == lastHeavyMtime) return false;
