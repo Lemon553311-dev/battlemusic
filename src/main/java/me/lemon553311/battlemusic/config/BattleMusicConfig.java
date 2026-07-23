@@ -24,7 +24,7 @@ public class BattleMusicConfig {
 	/** Which folder of tracks the PvP trigger uses when it STARTS a battle */
 	public enum PvpMusicPool { HEAVY, REGULAR, BOTH }
 
-    // Detect radius
+	/** Radius (blocks) around the player scanned for hostile mobs */
 	public double detectionRadius = 25.0D;
 	/** Number of aggroed mobs required to start a regular battle */
 	public int aggroMobCount = 5;
@@ -32,7 +32,7 @@ public class BattleMusicConfig {
 	public double headAimToleranceDegrees = 60.0D;
 	/** Require an unobstructed line of sight from mob to player */
 	public boolean requireLineOfSight = true;
-	/** Seconds a mob stays "counted" after its last aggro signa */
+	/** Seconds a mob stays "counted" after its last aggro signal */
 	public double aggroStickinessSeconds = 1.5D;
 	/** When true, a mob that is just standing around (stuck, out of reach, or only
 	 * turning its head) stops sustaining battle music: the music keeps going only

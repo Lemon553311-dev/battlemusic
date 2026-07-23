@@ -2,26 +2,15 @@ package me.lemon553311.battlemusic.audio;
 
 import me.lemon553311.battlemusic.BattleMusicClient;
 
-import org.lwjgl.stb.STBVorbisInfo;
-import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
 import javax.sound.sampled.SourceDataLine;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.lwjgl.stb.STBVorbis.*;
-import static org.lwjgl.system.MemoryUtil.NULL;
-
 /**
- *
  * One playback voice. Streams an Ogg Vorbis file on its own daemon thread: it
  * decodes a small chunk at a time with STB Vorbis (the decoder LWJGL/Minecraft
  * already ships), scales the samples by the current (faded) gain, and writes
@@ -68,7 +57,7 @@ public class MusicChannel {
 		this.name = name;
 	}
 
-    // Load + start from the beginning. Resets gain to 0.
+	// Load + start from the beginning. Resets gain to 0.
 	public boolean start(Path oggPath, boolean loop) {
 		return start(oggPath, loop, 0L, 0.0);
 	}
@@ -214,43 +203,22 @@ public class MusicChannel {
 	}
 
 	private void streamLoop(Path path, boolean loop, long startFrame, double startSeconds, AtomicBoolean alive) {
-		long decoder = NULL;
+		VorbisStream vorbis = null;
 		SourceDataLine line = null;
 		ShortBuffer pcm = null;
-		ByteBuffer encoded = null;
 
-		try (MemoryStack stack = MemoryStack.stackPush()) {
-			IntBuffer error = stack.mallocInt(1);
-			// Read the file in Java and decode from memory instead of using
-			// stb_vorbis_open_filename: LWJGL hands stb the path as UTF-8 bytes,
-			// but stb opens it with C fopen(), which on Windows expects the legacy
-			// ANSI codepage. Any non-ASCII track name (Cyrillic, diacritics, CJK,
-			// emoji) - or a non-ASCII Windows user name anywhere in the path -
-			// failed to open and the battle stayed silent. Reading through
-			// java.nio sidesteps the OS path layer entirely. (Vanilla decodes Ogg
-			// from streams for the same reason.)
+		try {
+			// Decode from an in-memory copy of the file; see VorbisStream for why
+			// the OS path layer must be bypassed (non-ASCII paths broke fopen()).
 			byte[] fileBytes = Files.readAllBytes(path);
-			encoded = MemoryUtil.memAlloc(fileBytes.length);
-			encoded.put(fileBytes);
-			encoded.flip();
-			decoder = stb_vorbis_open_memory(encoded, error, null);
-
-			if (decoder == NULL) {
-				BattleMusicClient.LOGGER.warn("[{}] STB open failed for {} (err {})", name, path, error.get(0));
+			vorbis = VorbisStream.open(fileBytes, "[" + name + "] " + path);
+			if (vorbis == null) {
 				warnUnplayable(path, fileBytes);
 				return;
 			}
 
-			int channels;
-			int sampleRate;
-			STBVorbisInfo info = STBVorbisInfo.malloc();
-			try {
-				stb_vorbis_get_info(decoder, info);
-				channels = info.channels();
-				sampleRate = info.sample_rate();
-			} finally {
-				info.free();
-			}
+			int channels = vorbis.channels();
+			int sampleRate = vorbis.sampleRate();
 
 			if (channels < 1 || channels > 2) {
 				BattleMusicClient.LOGGER.warn("[{}] unsupported channel count {} in {} (only mono/stereo Ogg Vorbis is supported)", name, channels, path);
@@ -258,10 +226,10 @@ public class MusicChannel {
 				return;
 			}
 
-            // Battle resume uses a frame offset; the per-song "start at" uses
-            // seconds, converted to frames now that we know the sample rate. A
-            // resume frame always wins over start-at seconds. If the seek fails
-            // (e.g. the file changed length), fall back to the start.
+			// Battle resume uses a frame offset; the per-song "start at" uses
+			// seconds, converted to frames now that we know the sample rate. A
+			// resume frame always wins over start-at seconds. If the seek fails
+			// (e.g. the file changed length), fall back to the start.
 			long seekFrame = startFrame;
 			if (seekFrame <= 0L && startSeconds > 0.0) {
 				seekFrame = (long) (startSeconds * sampleRate);
@@ -272,9 +240,9 @@ public class MusicChannel {
 			// that clobbered the frame a freshly started playback had just set,
 			// corrupting the battle-resume position of the NEW track.
 			if (seekFrame > 0L) {
-				if (!stb_vorbis_seek(decoder, (int) seekFrame)) {
+				if (!vorbis.seek(seekFrame)) {
 					BattleMusicClient.debug("[{}] seek to frame {} failed; starting from 0", name, seekFrame);
-					stb_vorbis_seek_start(decoder);
+					vorbis.seekStart();
 					if (alive.get()) playbackFrame = 0L;
 				} else {
 					if (alive.get()) playbackFrame = seekFrame;
@@ -282,17 +250,13 @@ public class MusicChannel {
 				}
 			}
 
-			AudioFormat format = new AudioFormat(sampleRate, 16, channels, true, false); // signed, little-endian
-			DataLine.Info dlInfo = new DataLine.Info(SourceDataLine.class, format);
-			line = (SourceDataLine) AudioSystem.getLine(dlInfo);
 			// Explicit small line buffer (2 decode chunks, ~0.19s at 44.1 kHz).
 			// The implementation default is often ~0.5s or more, and since gain is
 			// baked into the samples at write time, fades / the volume slider
 			// lagged behind by the whole buffer (and the resume position ran ahead
 			// of what was audible). Two chunks keeps fades snappy while leaving a
 			// full chunk of slack against dropouts.
-			line.open(format, SAMPLES_PER_CHUNK * channels * 2 * 2);
-			line.start();
+			line = vorbis.openLine(SAMPLES_PER_CHUNK * channels * 2 * 2);
 			BattleMusicClient.debug("[{}] playing {} @ {} Hz, {} ch", name, path.getFileName(), sampleRate, channels);
 
 			pcm = MemoryUtil.memAllocShort(SAMPLES_PER_CHUNK * channels);
@@ -301,12 +265,12 @@ public class MusicChannel {
 
 			while (alive.get() && !Thread.currentThread().isInterrupted()) {
 				pcm.clear();
-				int n = stb_vorbis_get_samples_short_interleaved(decoder, channels, pcm);
+				int n = vorbis.read(pcm);
 
 				if (n <= 0) {
 					if (loop && !justLooped) {
 						BattleMusicClient.debug("[{}] looping {}", name, path.getFileName());
-						stb_vorbis_seek_start(decoder);
+						vorbis.seekStart();
 						if (alive.get()) playbackFrame = 0L;
 						justLooped = true;
 						continue;
@@ -324,19 +288,10 @@ public class MusicChannel {
 				}
 				justLooped = false;
 
-				if (alive.get()) playbackFrame = stb_vorbis_get_sample_offset(decoder);
-				int sampleCount = n * channels;
+				if (alive.get()) playbackFrame = vorbis.sampleOffset();
 				float gain = currentGain * outputVolume * trackGain;
 				if (gain < 0f) gain = 0f;
-
-				for (int i = 0; i < sampleCount; i++) {
-					int v = (int) (pcm.get(i) * gain);
-					if (v > 32767) v = 32767;
-					else if (v < -32768) v = -32768;
-					bytes[i * 2] = (byte) (v & 0xFF);
-					bytes[i * 2 + 1] = (byte) ((v >> 8) & 0xFF);
-				}
-				line.write(bytes, 0, sampleCount * 2);
+				line.write(bytes, 0, vorbis.toBytes(pcm, n, gain, bytes));
 			}
 
 		} catch (Throwable t) {
@@ -348,14 +303,8 @@ public class MusicChannel {
 			if (line != null) {
 				try { line.flush(); line.stop(); line.close(); } catch (Throwable ignored) {}
 			}
-			if (decoder != NULL) {
-				try { stb_vorbis_close(decoder); } catch (Throwable ignored) {}
-			}
-			if (encoded != null) {
-				// Freed only after the decoder is closed: stb reads from this
-				// buffer for the decoder's whole lifetime.
-				try { MemoryUtil.memFree(encoded); } catch (Throwable ignored) {}
-			}
+			// Closes the decoder first, then frees the encoded buffer it reads from.
+			if (vorbis != null) vorbis.close();
 			// Only the still-current playback may clear shared status, so a stale
 			// thread finishing never clobbers a freshly started one
 			if (activeFlag == alive) {

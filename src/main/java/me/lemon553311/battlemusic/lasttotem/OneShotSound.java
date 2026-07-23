@@ -1,32 +1,24 @@
 package me.lemon553311.battlemusic.lasttotem;
 
 import me.lemon553311.battlemusic.BattleMusicClient;
+import me.lemon553311.battlemusic.audio.VorbisStream;
 
-import org.lwjgl.stb.STBVorbisInfo;
-import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
 import javax.sound.sampled.SourceDataLine;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static org.lwjgl.stb.STBVorbis.*;
-import static org.lwjgl.system.MemoryUtil.NULL;
 
 /**
  * Fire-and-forget one-shot Ogg Vorbis player for the Last Totem Standing alert.
  *
- * This deliberately reuses the exact decode/playback approach proven in
+ * This shares the decode/playback plumbing proven in
  * {@link me.lemon553311.battlemusic.audio.MusicChannel} (STB Vorbis -> Java
- * Sound on a daemon thread), so it does not depend on Minecraft's OpenAL sound
- * engine or its sound-event registry at all.
+ * Sound on a daemon thread, via {@link me.lemon553311.battlemusic.audio.VorbisStream}),
+ * so it does not depend on Minecraft's OpenAL sound engine or its sound-event
+ * registry at all.
  *
  * The bundled .ogg is read from the jar into memory once and decoded with
  * stb_vorbis_open_memory. It is deliberately NOT extracted to a temp file:
@@ -94,60 +86,31 @@ public final class OneShotSound {
 	}
 
 	private static void stream(String label, byte[] data, float gain) {
-		long decoder = NULL;
+		VorbisStream vorbis = null;
 		SourceDataLine line = null;
 		ShortBuffer pcm = null;
-		ByteBuffer encoded = null;
 
-		try (MemoryStack stack = MemoryStack.stackPush()) {
-			IntBuffer error = stack.mallocInt(1);
-			encoded = MemoryUtil.memAlloc(data.length);
-			encoded.put(data);
-			encoded.flip();
-			decoder = stb_vorbis_open_memory(encoded, error, null);
-			if (decoder == NULL) {
-				BattleMusicClient.LOGGER.warn("[lts] STB open failed for {} (err {})", label, error.get(0));
-				return;
-			}
-
-			STBVorbisInfo info = STBVorbisInfo.malloc();
-			int channels;
-			int sampleRate;
-			try {
-				stb_vorbis_get_info(decoder, info);
-				channels = info.channels();
-				sampleRate = info.sample_rate();
-			} finally {
-				info.free();
-			}
+		try {
+			vorbis = VorbisStream.open(data, "[lts] " + label);
+			if (vorbis == null) return;
+			int channels = vorbis.channels();
 			if (channels < 1 || channels > 2) {
 				BattleMusicClient.LOGGER.warn("[lts] unsupported channel count {} in {}", channels, label);
 				return;
 			}
 
-			AudioFormat format = new AudioFormat(sampleRate, 16, channels, true, false); // signed, little-endian
-			DataLine.Info dlInfo = new DataLine.Info(SourceDataLine.class, format);
-			line = (SourceDataLine) AudioSystem.getLine(dlInfo);
-			line.open(format);
-			line.start();
+			// Implementation-default line buffer: one-shots have no fades, so
+			// buffer-induced gain latency does not matter here.
+			line = vorbis.openLine(0);
 
 			pcm = MemoryUtil.memAllocShort(SAMPLES_PER_CHUNK * channels);
 			byte[] bytes = new byte[SAMPLES_PER_CHUNK * channels * 2];
 
 			while (!Thread.currentThread().isInterrupted()) {
 				pcm.clear();
-				int n = stb_vorbis_get_samples_short_interleaved(decoder, channels, pcm);
+				int n = vorbis.read(pcm);
 				if (n <= 0) break; // reached the end -> one-shot finished
-
-				int sampleCount = n * channels;
-				for (int i = 0; i < sampleCount; i++) {
-					int v = (int) (pcm.get(i) * gain);
-					if (v > 32767) v = 32767;
-					else if (v < -32768) v = -32768;
-					bytes[i * 2] = (byte) (v & 0xFF);
-					bytes[i * 2 + 1] = (byte) ((v >> 8) & 0xFF);
-				}
-				line.write(bytes, 0, sampleCount * 2);
+				line.write(bytes, 0, vorbis.toBytes(pcm, n, gain, bytes));
 			}
 			line.drain();
 
@@ -160,14 +123,8 @@ public final class OneShotSound {
 			if (line != null) {
 				try { line.flush(); line.stop(); line.close(); } catch (Throwable ignored) {}
 			}
-			if (decoder != NULL) {
-				try { stb_vorbis_close(decoder); } catch (Throwable ignored) {}
-			}
-			if (encoded != null) {
-				// Freed only after the decoder is closed: stb reads from this
-				// buffer for the decoder's whole lifetime.
-				try { MemoryUtil.memFree(encoded); } catch (Throwable ignored) {}
-			}
+			// Closes the decoder first, then frees the encoded buffer it reads from.
+			if (vorbis != null) vorbis.close();
 		}
 	}
 }

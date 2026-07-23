@@ -19,13 +19,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
+ * Central battle state machine: consumes the detection signals once per client tick
+ * and drives the two music channels through the IDLE / REGULAR / HEAVY phases, with
+ * fades, grace timers, death handling, and battle resume.
  *
  * @author Lemon553311
  * @author uxokpro1234
  * @author user2378
- * 
- * it actually gets worse! 
- * 
  */
 
 public class BattleStateMachine {
@@ -55,7 +55,7 @@ public class BattleStateMachine {
 	// battle started from the pvp trigger with pool=BOTH: re-rolls in REGULAR phase keep
 	// picking from both folders.
 	private boolean regularUsesBothPool = false;
-	// track music for pvp n shit
+	// battle was started by the PvP trigger; suppresses the low-HP upgrade to HEAVY.
 	private boolean pvpPoolBattle = false;
 
 	// resume battle
@@ -140,7 +140,7 @@ public class BattleStateMachine {
 			return;
 		}
 		if (playerWasDead) {
-			//stop music kthx
+			// Player respawned: cut the held death-screen music and clear battle state.
 			playerWasDead = false;
 			stopForRespawn();
 			tickChannels(dt);
@@ -154,11 +154,32 @@ public class BattleStateMachine {
 		int count = aggro.getAggroCount();
 		boolean boss = bosses.anyBossNearby(player, world, clientTick);
 
-		// pvp trigger: a burst of damage from another player forces heavy and can start a
-		// battle on its own. the combat-heat timer keeps it going through a duel, refreshed
-		// on every player hit so a long fight never cuts out but idling fades.
-		// only player damage re-arms it. fall/lava/fire after a duel must NOT keep pvp music
-		// alive with nobody around.
+		boolean playerCombatHot = updatePlayerCombatHeat(dt, player, world);
+
+		evaluateBattle(dt, player, count, boss, playerCombatHot);
+
+		// If a non-looping track ended mid-battle, roll another one.
+		refreshFinishedTracks();
+
+		// Vanilla's own background music knows nothing about ours and would
+		// happily start a track mid-battle, playing on top of the battle music.
+		// While any battle channel is audible, keep vanilla's music stopped
+		// (no-op when vanilla isn't playing anything).
+		suppressVanillaMusic(client);
+
+		tickChannels(dt);
+	}
+
+	/**
+	 * PvP trigger bookkeeping: a burst of damage from another player forces heavy
+	 * and can start a battle on its own. The combat-heat timer keeps it going
+	 * through a duel, refreshed on every player hit so a long fight never cuts out
+	 * but idling fades. Only player damage re-arms it: fall/lava/fire after a duel
+	 * must NOT keep pvp music alive with nobody around.
+	 *
+	 * @return true while the pvp combat-heat timer is hot
+	 */
+	private boolean updatePlayerCombatHeat(double dt, LocalPlayer player, ClientLevel world) {
 		damage.update(player, world, clientTick);
 		boolean combatActivity = damage.receivedThisTick();
 		// combat-heat timer = time since the last pvp hit, so it holds through a duel and
@@ -178,7 +199,11 @@ public class BattleStateMachine {
 					config.playerDamageWindowSeconds, config.playerCombatTimeoutSeconds);
 		}
 		playerCombatWasHot = playerCombatHot;
+		return playerCombatHot;
+	}
 
+	/** Start, hold, escalate, or fade the battle based on this tick's detection results. */
+	private void evaluateBattle(double dt, LocalPlayer player, int count, boolean boss, boolean playerCombatHot) {
 		// While still inside the post-battle resume window, the bar to RE-start a battle drops
 		// to resumeAggroMobCount (the "adrenaline keeps going" trigger). Cold starts outside the
 		// window still require the full aggroMobCount.
@@ -224,17 +249,6 @@ public class BattleStateMachine {
 				beginFadeOut(false);
 			}
 		}
-
-		// If a non-looping track ended mid-battle, roll another one.
-		refreshFinishedTracks();
-
-		// Vanilla's own background music knows nothing about ours and would
-		// happily start a track mid-battle, playing on top of the battle music.
-		// While any battle channel is audible, keep vanilla's music stopped
-		// (no-op when vanilla isn't playing anything).
-		suppressVanillaMusic(client);
-
-		tickChannels(dt);
 	}
 
 	private void suppressVanillaMusic(Minecraft client) {
@@ -339,6 +353,39 @@ public class BattleStateMachine {
 		if (f != null) f.onHeavyFromLowHp();
 	}
 
+	// One resolved "what to play" decision for an engage call: either the resume
+	// token (track + frame) or a fresh pick from the library.
+	private static final class TrackChoice {
+		final Path track;      // null when the picker came up empty
+		final long startFrame; // > 0 only when resuming mid-track
+		TrackChoice(Path track, long startFrame) {
+			this.track = track;
+			this.startFrame = startFrame;
+		}
+	}
+
+	/**
+	 * Resolve the resume token for an engage call, or null when this start should
+	 * pick a fresh track instead (resume disabled, expired, or not requested).
+	 */
+	private TrackChoice resumeChoiceOr(boolean allowResume, Path resumeFile, long resumeFrame, String tag) {
+		if (!allowResume || !canResume(resumeFile)) return null;
+		BattleMusicClient.debug("{}: RESUMING {} at frame {} (within {}s)",
+				tag, resumeFile.getFileName(), resumeFrame, config.resumeWithinSeconds);
+		return new TrackChoice(resumeFile, resumeFrame);
+	}
+
+	/**
+	 * Common tail of every engage call: apply the track's per-song settings and
+	 * start it on {@code channel}. The per-song "start at" only applies on a
+	 * fresh start; a resume keeps its frame. Returns true when playback started.
+	 */
+	private boolean startOnChannel(MusicChannel channel, TrackChoice choice, boolean loop) {
+		double startSec = (choice.startFrame > 0L) ? 0.0 : library.startSecondsFor(choice.track);
+		channel.setTrackGain(library.effectiveVolumeFor(choice.track));
+		return choice.track != null && channel.start(choice.track, loop, choice.startFrame, startSec);
+	}
+
 	private void engageRegular(boolean allowResume) {
 		if (!library.hasRegular()) {
 			// no regular tracks. fall back to heavy so a battle still has music if the user
@@ -353,16 +400,11 @@ public class BattleStateMachine {
 		}
 		Phase prevPhase = phase;
 		phase = Phase.REGULAR;
-		Path track;
-		long startFrame = 0L;
-		if (allowResume && canResume(resumeRegularFile)) {
-			track = resumeRegularFile;
-			startFrame = resumeRegularFrame;
-			BattleMusicClient.debug("engageRegular: RESUMING {} at frame {} (within {}s)",
-					track.getFileName(), startFrame, config.resumeWithinSeconds);
-		} else {
-			track = library.pickRegular();
+		TrackChoice choice = resumeChoiceOr(allowResume, resumeRegularFile, resumeRegularFrame, "engageRegular");
+		if (choice == null) {
+			Path track = library.pickRegular();
 			BattleMusicClient.debug("engageRegular: phase=REGULAR, track={}", track == null ? "<none>" : track.getFileName());
+			choice = new TrackChoice(track, 0L);
 		}
 		// Consume the resume token so a mid-battle re-roll cannot reuse it
 		resumeRegularFile = null;
@@ -370,10 +412,7 @@ public class BattleStateMachine {
 		// refreshFinishedTracks() roll the next one so it stays varied instead of one song
 		// on repeat.
 		boolean loop = library.playableRegularCount() <= 1;
-		// per-song "start at" only applies on a fresh start; a resume keeps its frame.
-		double startSec = (startFrame > 0L) ? 0.0 : library.startSecondsFor(track);
-		regularChannel.setTrackGain(library.effectiveVolumeFor(track));
-		if (track != null && regularChannel.start(track, loop, startFrame, startSec)) {
+		if (startOnChannel(regularChannel, choice, loop)) {
 			regularChannel.fadeTo(1f, config.fadeInDurationSeconds, false);
 			heavyChannel.fadeTo(0f, 0.25, true);
 		} else {
@@ -390,16 +429,10 @@ public class BattleStateMachine {
 		boolean prevLatched = heavyLatched;
 		heavyLatched = true;
 		phase = Phase.HEAVY;
-		Path track;
-		long startFrame = 0L;
-		if (allowResume && canResume(resumeHeavyFile)) {
-			track = resumeHeavyFile;
-			startFrame = resumeHeavyFrame;
-			BattleMusicClient.debug("engageHeavy: RESUMING {} at frame {} (within {}s)",
-					track.getFileName(), startFrame, config.resumeWithinSeconds);
-		} else {
+		TrackChoice choice = resumeChoiceOr(allowResume, resumeHeavyFile, resumeHeavyFrame, "engageHeavy");
+		if (choice == null) {
 			// Heavy uses its own folder; fall back to regular folder if heavy is empty
-			track = library.hasHeavy() ? library.pickHeavy()
+			Path track = library.hasHeavy() ? library.pickHeavy()
 					: (library.hasRegular() ? library.pickRegular() : null);
 			// under the "both" pool the regular channel might already be playing this exact
 			// file; crossfading it onto heavy makes it play twice with a slight offset.
@@ -411,10 +444,11 @@ public class BattleStateMachine {
 				for (int i = 0; i < 6 && track != null && track.equals(nowPlaying); i++) track = library.pickHeavy();
 			}
 			BattleMusicClient.debug("engageHeavy: phase=HEAVY, track={}", track == null ? "<none>" : track.getFileName());
+			choice = new TrackChoice(track, 0L);
 		}
 		// Consume the resume token so a mid-battle re-roll cannot reuse it
 		resumeHeavyFile = null;
-		if (track == null) {
+		if (choice.track == null) {
 			BattleMusicClient.debug("engageHeavy: no tracks available (heavy or regular), staying silent");
 			// Nothing to play: revert. Leaving heavyLatched + phase=HEAVY with a silent
 			// heavy channel froze the battle - when the still-playing regular song
@@ -431,16 +465,14 @@ public class BattleStateMachine {
 		// loop only with a single heavy track, else play through and continue via
 		// refreshFinishedTracks().
 		boolean loop = (library.hasHeavy() ? library.playableHeavyCount() : library.playableRegularCount()) <= 1;
-		double startSec = (startFrame > 0L) ? 0.0 : library.startSecondsFor(track);
-		heavyChannel.setTrackGain(library.effectiveVolumeFor(track));
-		if (heavyChannel.start(track, loop, startFrame, startSec)) {
+		if (startOnChannel(heavyChannel, choice, loop)) {
 			boolean crossfading = regularChannel.isAudible();
 			double heavyInSeconds = crossfading ? config.heavyCrossfadeSeconds : config.fadeInDurationSeconds;
 			regularChannel.fadeTo(0f, config.heavyCrossfadeSeconds, true);
 			heavyChannel.fadeTo(1f, heavyInSeconds, false);
 			BattleMusicClient.debug("engageHeavy: {} regular -> HEAVY over {}s", crossfading ? "crossfading" : "fading in", heavyInSeconds);
 		} else {
-			BattleMusicClient.debug("engageHeavy: start failed for {}, keeping current audio", track.getFileName());
+			BattleMusicClient.debug("engageHeavy: start failed for {}, keeping current audio", choice.track.getFileName());
 			// Same revert as the track==null case: the escalation did not happen, so
 			// don't latch it. maybeUpgradeToHeavy can retry next tick (the failed file
 			// is blacklisted by MusicChannel.start, so the retry picks another one).
@@ -463,25 +495,19 @@ public class BattleStateMachine {
 		}
 		Phase prevPhase = phase;
 		phase = Phase.REGULAR;
-		Path track;
-		long startFrame = 0L;
-		if (allowResume && canResume(resumeRegularFile)) {
-			track = resumeRegularFile;
-			startFrame = resumeRegularFrame;
-			BattleMusicClient.debug("engageBoth: RESUMING {} at frame {} (within {}s)",
-					track.getFileName(), startFrame, config.resumeWithinSeconds);
-		} else {
-			track = library.pickBoth();
+		TrackChoice choice = resumeChoiceOr(allowResume, resumeRegularFile, resumeRegularFrame, "engageBoth");
+		if (choice == null) {
+			Path track = library.pickBoth();
 			BattleMusicClient.debug("engageBoth: phase=REGULAR (PvP pool=both), track={}",
 					track == null ? "<none>" : track.getFileName());
+			choice = new TrackChoice(track, 0L);
 		}
+		// Consume the resume token so a mid-battle re-roll cannot reuse it
 		resumeRegularFile = null;
 		// loop only when the combined pool has a single track, else play through and roll the
 		// next one via refreshFinishedTracks().
 		boolean loop = (library.playableRegularCount() + library.playableHeavyCount()) <= 1;
-		double startSec = (startFrame > 0L) ? 0.0 : library.startSecondsFor(track);
-		regularChannel.setTrackGain(library.effectiveVolumeFor(track));
-		if (track != null && regularChannel.start(track, loop, startFrame, startSec)) {
+		if (startOnChannel(regularChannel, choice, loop)) {
 			regularChannel.fadeTo(1f, config.fadeInDurationSeconds, false);
 			heavyChannel.fadeTo(0f, 0.25, true);
 		} else {
@@ -652,29 +678,21 @@ public class BattleStateMachine {
 	// smooth. bosses.clear() only drops the throttle cache (NOT the configured boss ids) so
 	// a fast respawn can't read a stale boss hit from where you died.
 	private void stopForRespawn() {
-		regularChannel.hardStop();
-		heavyChannel.hardStop();
-		phase = Phase.IDLE;
-		battleActive = false;
-		heavyLatched = false;
-		regularUsesBothPool = false;
-		pvpPoolBattle = false;
-		graceSecondsLeft = 0.0;
-		playerCombatSecondsLeft = 0.0;
-		playerCombatWasHot = false;
-		deathHoldSecondsLeft = 0.0;
-		resumeRegularFile = null;
-		resumeHeavyFile = null;
-		resumeStampNanos = 0L;
-		resumeWasHeavy = false;
-		aggro.clear();
-		damage.clear();
-		bosses.clear();
+		clearBattleState();
 	}
 
 	// Called on disconnect: silence everything and reset state.
 	public void reset() {
 		BattleMusicClient.debug("reset(): disconnect/world unload, silencing everything");
+		clearBattleState();
+		playerWasDead = false;
+		lastTickNanos = 0L;
+	}
+
+	// Shared teardown for respawn + disconnect: silence both channels and drop all
+	// battle, timer, and resume state. bosses.clear() only drops the boss-hit throttle
+	// cache (NOT the configured boss ids).
+	private void clearBattleState() {
 		regularChannel.hardStop();
 		heavyChannel.hardStop();
 		phase = Phase.IDLE;
@@ -686,7 +704,6 @@ public class BattleStateMachine {
 		playerCombatSecondsLeft = 0.0;
 		playerCombatWasHot = false;
 		deathHoldSecondsLeft = 0.0;
-		playerWasDead = false;
 		resumeRegularFile = null;
 		resumeHeavyFile = null;
 		resumeStampNanos = 0L;
@@ -694,7 +711,6 @@ public class BattleStateMachine {
 		aggro.clear();
 		damage.clear();
 		bosses.clear();
-		lastTickNanos = 0L;
 	}
 
 	// Re-read config-derived state (called when the settings screen saves).
@@ -702,5 +718,3 @@ public class BattleStateMachine {
 		bosses.refreshExtraIds();
 	}
 }
-
-// easter egg
