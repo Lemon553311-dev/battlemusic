@@ -1,7 +1,7 @@
 # Minecraft Battle Music mod for Fabric
 
-![Minecraft](https://img.shields.io/badge/Minecraft-1.16.5+.2-green)
-![Minecraft](https://img.shields.io/badge/Minecraft-26.0+.2-green)
+![Minecraft](https://img.shields.io/badge/Minecraft-1.16.5+-green)
+![Minecraft](https://img.shields.io/badge/Minecraft-26.0+-green)
 
 This mod plays your imported music during mob/PVP battles.
 
