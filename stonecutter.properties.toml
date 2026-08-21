@@ -1,438 +1,367 @@
 # Centralized Stonecutter properties.
-# Shared keys live at the top; per-version overrides live in the ["<version>"]
-# sections (these are read in build.gradle.kts via sc.properties[...]).
-# See https://stonecutter.kikugie.dev/wiki/config/properties
+# Shared keys at the top; per-version overrides in the ["<version>"] sections
+# (read in build.gradle.kts via property(...)/findProperty).
 #
-# Version ladder (1.16 -> 26.2), grouped by the //? if gates that actually
-# change behavior in the Java sources (see PORTING.md for the full writeup):
+# Version ladder, grouped by where the //? gates actually change behavior:
 #   - HUD registration: HudRenderCallback (<1.21.6) vs HudElementRegistry (>=1.21.6)
-#   - HUD draw target:  PoseStack (<1.20) vs GuiGraphics (1.20-1.21.x) vs GuiGraphicsExtractor (>=26.1)
-#   - Blit call:        legacy scaled blit (<1.21.5) vs RenderPipelines blit (>=1.21.5)
-#   - Registries:       Registry.ENTITY_TYPE (<1.19.3) vs BuiltInRegistries.ENTITY_TYPE (>=1.19.3)
+#   - HUD draw target:  PoseStack (<1.20) vs GuiGraphics (1.20+) vs GuiGraphicsExtractor (>=26.1)
+#   - Blit call:        legacy (<1.21.5) vs RenderPipelines (>=1.21.5)
+#   - Registries:       Registry.ENTITY_TYPE (<1.19.3) vs BuiltInRegistries (>=1.19.3)
 #   - Warden:           does not exist before 1.19
-#   - Non-obf renames:  ResourceLocation/GuiGraphics (<26.1) vs Identifier/GuiGraphicsExtractor (>=26.1)
-#
-# Dependency versions have been verified against the live Modrinth API (see
-# PORTING.md for the verification log). mod.loader_compat minimums are loose
-# lower bounds and were not independently re-verified, but any recent Fabric
-# Loader satisfies them.
+#   - Non-obf renames:  ResourceLocation etc. become Identifier etc. (>=26.1)
 
 mod.id = "battlemusic"
 mod.name = "Battle Music"
 mod.group = "me.lemon553311.battlemusic"
 mod.version = "1.2.0"
-# Modrinth project to publish to (the slug from your project URL, or its ID).
 mod.modrinth_id = "battle-music"
-# CurseForge project to publish to. This must be the NUMERIC project id shown
-# in the "About Project" box on the CurseForge project page (NOT the slug).
-# TODO: replace with your real id after creating the project on CurseForge.
+# NUMERIC CurseForge project id (from the "About Project" box), not the slug.
 mod.curseforge_id = "1595905"
 
-# Fabric API version range for fabric.mod.json's depends block. Kept at "*"
-# (any version) so older modpacks running older Fabric API builds are not
-# locked out - every Fabric API release for 1.17+ already contains all the
-# modules this mod uses (lifecycle events v1, networking api v1, rendering
-# v1). Only 1.16.5 needs a real floor; it overrides this in its own section.
+# Fabric API version range for fabric.mod.json's depends block. "*" everywhere
+# except 1.16.5, which needs a real runtime floor (see its section).
 mod.fabric_api_compat = "*"
 
-# Fabric API's mod id is version-dependent and is NOT checked by the compiler,
-# so it must be pinned per tier or the mod refuses to launch even when Fabric
-# API is installed:
-#   - pre-1.19.3   : id is "fabric" ("fabric-api" does not exist yet)
-#   - 1.19.3-1.21.x: renamed to "fabric-api" ("fabric" kept as an alias)
-#   - 26.1+        : the "fabric" alias was REMOVED; only "fabric-api" works
-# "fabric-api" is therefore correct for every tier >=1.19.3 (shared default
-# below); the four pre-1.19.3 tiers override it back to "fabric" in their own
-# sections. Consumed by processResources expand() as ${fabric_api_id} in
-# fabric.mod.json's depends block.
+# Fabric API's mod id is version-dependent and the compiler never checks it,
+# so it must be pinned per tier or the mod refuses to launch even with Fabric
+# API installed:
+#   pre-1.19.3: "fabric" / 1.19.3-1.21.x: "fabric-api" ("fabric" alias kept)
+#   26.1+:      only "fabric-api" (alias removed)
+# Consumed as ${fabric_api_id} in fabric.mod.json.
 mod.fabric_api_id = "fabric-api"
 
-# Fabric Loader itself is not Minecraft-version-specific, so one buildtime
-# loader works to compile every tier below.
 deps.fabric_loader = "0.19.3"
 
-# ---- 1.16.x: pre-GuiGraphics, pre-BuiltInRegistries, pre-Warden-registry-move, Java 8 ----
+# ---- 1.16.x ----
 ["1.16.5-fabric"]
 mod.mc_compat = ">=1.16 <=1.16.5"
-mod.loader_compat = ">=0.11.3"       # verify - earliest loader that reliably supports 1.16.5
+mod.loader_compat = ">=0.11.3"
 mod.mc_releases = "1.16,1.16.1,1.16.2,1.16.3,1.16.4,1.16.5"
 mod.java_compat = ">=8"
 deps.fabric_api = "0.42.0+1.16"
-mod.fabric_api_id = "fabric"         # pre-1.19.3: Fabric API's mod id is "fabric", not "fabric-api"
-# Runtime floor: ClientPlayConnectionEvents (networking api v1) first shipped
-# in Fabric API 0.30.0 for 1.16.5 (Jan 2021, verified on Modrinth/CurseForge).
-# Older API builds are missing the class and would crash this mod on init, so
-# they must be rejected up front with a clear "update Fabric API" screen.
+mod.fabric_api_id = "fabric"
+# ClientPlayConnectionEvents first shipped in Fabric API 0.30.0 for 1.16.5;
+# older builds crash on init, so reject them up front.
 mod.fabric_api_compat = ">=0.30.0"
 deps.modmenu = "1.16.23"
-deps.cloth_config = "4.16.91"        # confirmed on Modrinth
+deps.cloth_config = "4.16.91"
 
-# ---- 1.17.x: pre-GuiGraphics, Java 16 ----
+# ---- 1.17.x ----
 ["1.17.1-fabric"]
 mod.mc_compat = ">=1.17 <=1.17.1"
-mod.loader_compat = ">=0.12.12"      # verify
+mod.loader_compat = ">=0.12.12"
 mod.mc_releases = "1.17,1.17.1"
 mod.java_compat = ">=16"
 deps.fabric_api = "0.46.1+1.17"
-mod.fabric_api_id = "fabric"         # pre-1.19.3: Fabric API's mod id is "fabric", not "fabric-api"
-deps.modmenu = "2.0.14"              # confirmed on Modrinth
-deps.cloth_config = "5.3.63"         # corrected - 5.0.38 does not exist on Modrinth for 1.17.1
+mod.fabric_api_id = "fabric"
+deps.modmenu = "2.0.14"
+deps.cloth_config = "5.3.63"
 
-# ---- 1.18.x: pre-GuiGraphics, Java 17 ----
+# ---- 1.18.x ----
 ["1.18.2-fabric"]
 mod.mc_compat = ">=1.18 <=1.18.2"
-mod.loader_compat = ">=0.13.3"       # verify
+mod.loader_compat = ">=0.13.3"
 mod.mc_releases = "1.18,1.18.1,1.18.2"
 mod.java_compat = ">=17"
 deps.fabric_api = "0.75.1+1.18.2"
-mod.fabric_api_id = "fabric"         # pre-1.19.3: Fabric API's mod id is "fabric", not "fabric-api"
+mod.fabric_api_id = "fabric"
 deps.modmenu = "3.2.4"
 deps.cloth_config = "6.5.102"
 
-# ---- 1.19-1.19.2: pre-GuiGraphics, pre-BuiltInRegistries (still Registry.*), Java 17 ----
+# ---- 1.19-1.19.2 ----
 ["1.19.2-fabric"]
 mod.mc_compat = ">=1.19 <=1.19.2"
-mod.loader_compat = ">=0.14.9"       # verify
+mod.loader_compat = ">=0.14.9"
 mod.mc_releases = "1.19,1.19.1,1.19.2"
 mod.java_compat = ">=17"
 deps.fabric_api = "0.76.0+1.19.2"
-mod.fabric_api_id = "fabric"         # pre-1.19.3: Fabric API's mod id is "fabric" (1.19.2 predates the rename)
-deps.modmenu = "4.1.2"               # confirmed on Modrinth
+mod.fabric_api_id = "fabric"
+deps.modmenu = "4.1.2"
 deps.cloth_config = "8.3.115"
 
-# ---- 1.19.3-1.19.4: pre-GuiGraphics, BuiltInRegistries now exists, Java 17 ----
+# ---- 1.19.3-1.19.4 ----
 ["1.19.4-fabric"]
 mod.mc_compat = ">=1.19.3 <=1.19.4"
-mod.loader_compat = ">=0.14.19"      # verify
+mod.loader_compat = ">=0.14.19"
 mod.mc_releases = "1.19.3,1.19.4"
 mod.java_compat = ">=17"
 deps.fabric_api = "0.87.2+1.19.4"
 deps.modmenu = "6.3.1"
 deps.cloth_config = "10.1.135"
 
-# ---- 1.20-1.20.1: first GuiGraphics version, Java 17 ----
+# ---- 1.20-1.20.1 ----
 ["1.20.1-fabric"]
 mod.mc_compat = ">=1.20 <=1.20.1"
 mod.loader_compat = ">=0.14.0"
 mod.mc_releases = "1.20,1.20.1"
 mod.java_compat = ">=17"
-deps.fabric_api = "0.92.6+1.20.1"   # confirmed on Modrinth
-deps.modmenu = "7.2.2"              # confirmed on Modrinth
-deps.cloth_config = "11.1.136"      # confirmed on Modrinth
+deps.fabric_api = "0.92.6+1.20.1"
+deps.modmenu = "7.2.2"
+deps.cloth_config = "11.1.136"
 
-# ---- 1.20.2-1.20.4: GuiGraphics era, Java 17 ----
+# ---- 1.20.2-1.20.4 ----
 ["1.20.4-fabric"]
 mod.mc_compat = ">=1.20.2 <=1.20.4"
-mod.loader_compat = ">=0.15.6"       # verify
+mod.loader_compat = ">=0.15.6"
 mod.mc_releases = "1.20.2,1.20.3,1.20.4"
 mod.java_compat = ">=17"
 deps.fabric_api = "0.96.0+1.20.4"
 deps.modmenu = "9.0.0"
-deps.cloth_config = "13.0.138"       # corrected - 12.0.118+fabric does not exist on Maven
+deps.cloth_config = "13.0.138"
 
-# ---- 1.20.5-1.20.6: GuiGraphics era, Mojang bumped required Java to 21 here ----
+# ---- 1.20.5-1.20.6 (Java 21 from here on) ----
 ["1.20.6-fabric"]
 mod.mc_compat = ">=1.20.5 <=1.20.6"
-mod.loader_compat = ">=0.15.11"      # verify
+mod.loader_compat = ">=0.15.11"
 mod.mc_releases = "1.20.5,1.20.6"
 mod.java_compat = ">=21"
 deps.fabric_api = "0.98.0+1.20.6"
-deps.modmenu = "10.0.0"              # confirmed on Modrinth
+deps.modmenu = "10.0.0"
 deps.cloth_config = "14.0.126"
 
-# ---- 1.21-1.21.1: GuiGraphics era, legacy blit, Java 21 ----
+# ---- 1.21-1.21.1 ----
 ["1.21.1-fabric"]
 mod.mc_compat = ">=1.21 <=1.21.1"
 mod.loader_compat = ">=0.15.0"
 mod.mc_releases = "1.21,1.21.1"
-deps.fabric_api = "0.116.5+1.21.1"  # confirmed on Modrinth
-deps.modmenu = "11.0.3"             # confirmed on Modrinth
-deps.cloth_config = "15.0.140"      # confirmed on Modrinth
+deps.fabric_api = "0.116.5+1.21.1"
+deps.modmenu = "11.0.3"
+deps.cloth_config = "15.0.140"
 mod.java_compat = ">=21"
 
-# ---- 1.21.2-1.21.4: GuiGraphics era, legacy blit, Java 21 ----
+# ---- 1.21.2-1.21.4 ----
 ["1.21.4-fabric"]
 mod.mc_compat = ">=1.21.2 <=1.21.4"
-mod.loader_compat = ">=0.16.5"       # verify
+mod.loader_compat = ">=0.16.5"
 mod.mc_releases = "1.21.2,1.21.3,1.21.4"
 mod.java_compat = ">=21"
 deps.fabric_api = "0.111.0+1.21.4"
 deps.modmenu = "13.0.2"
-deps.cloth_config = "17.0.144"       # corrected - Maven artifact versions never carry a +fabric suffix
+deps.cloth_config = "17.0.144"
 
-# ---- 1.21.5: RenderPipelines blit introduced (isolated tier), Java 21 ----
+# ---- 1.21.5 (isolated tier: RenderPipelines blit) ----
 ["1.21.5-fabric"]
 mod.mc_compat = "~1.21.5"
-mod.loader_compat = ">=0.16.9"       # verify
+mod.loader_compat = ">=0.16.9"
 mod.mc_releases = "1.21.5"
 mod.java_compat = ">=21"
-deps.fabric_api = "0.125.0+1.21.5"   # confirmed on Modrinth
-deps.modmenu = "14.0.0"              # confirmed on Modrinth
-deps.modmenu_from_modrinth = "true"  # terraformers maven 400'd on this jar in CI; pull from Modrinth maven instead
-deps.cloth_config = "18.0.145"       # corrected - Maven artifact versions never carry a +fabric suffix
+deps.fabric_api = "0.125.0+1.21.5"
+deps.modmenu = "14.0.0"
+deps.modmenu_from_modrinth = "true"   # terraformers maven 400s on this jar
+deps.cloth_config = "18.0.145"
 
-# ---- 1.21.6-1.21.8: new HUD API (HudElementRegistry), Java 21 ----
+# ---- 1.21.6-1.21.8 (new HUD API) ----
 ["1.21.8-fabric"]
 mod.mc_compat = ">=1.21.6 <=1.21.8"
 mod.loader_compat = ">=0.16.0"
 mod.mc_releases = "1.21.6,1.21.7,1.21.8"
-deps.fabric_api = "0.133.4+1.21.8"  # confirmed on Modrinth
-deps.modmenu = "15.0.0"             # confirmed on Modrinth
-deps.modmenu_from_modrinth = "true"  # same flaky-host armor as 1.21.5 (jar name verified on Modrinth)
-deps.cloth_config = "19.0.147"      # confirmed on Modrinth
+deps.fabric_api = "0.133.4+1.21.8"
+deps.modmenu = "15.0.0"
+deps.modmenu_from_modrinth = "true"
+deps.cloth_config = "19.0.147"
 mod.java_compat = ">=21"
 
-# ---- 26.1.2: non-obfuscated Fabric (build.fabric26.gradle.kts), Java 25 ----
-# Fabric API's mod id is unconditionally "fabric-api" here (see the shared
-# mod.fabric_api_id default above; the pre-1.19.3 "fabric" alias is long gone).
+# ---- 26.1.2 (non-obfuscated Fabric, build.fabric26.gradle.kts) ----
 ["26.1.2-fabric"]
 mod.mc_compat = "~26.1"
 mod.loader_compat = ">=0.16.0"
 mod.mc_releases = "26.1,26.1.1,26.1.2"
-deps.fabric_api = "0.152.1+26.1.2"   # confirmed on Modrinth
-deps.modmenu = "18.0.0-beta.1"       # confirmed on Modrinth
-deps.cloth_config = "26.1.154"       # confirmed on maven.shedaniel.me (fabric artifact)
+deps.fabric_api = "0.152.1+26.1.2"
+deps.modmenu = "18.0.0-beta.1"
+deps.cloth_config = "26.1.154"
 mod.java_compat = ">=25"
 
-# ---- 26.2: non-obfuscated Fabric, active/dev version, Java 25 ----
+# ---- 26.2 (non-obfuscated Fabric, active/dev version) ----
 ["26.2-fabric"]
 mod.mc_compat = "~26.2"
 mod.loader_compat = ">=0.16.0"
 mod.mc_releases = "26.2"
-deps.fabric_api = "0.152.2+26.2"     # confirmed on Modrinth
-deps.modmenu = "20.0.0-beta.3"       # confirmed on Modrinth
-deps.cloth_config = "26.2.155"       # confirmed on maven.shedaniel.me (fabric artifact)
+deps.fabric_api = "0.152.2+26.2"
+deps.modmenu = "20.0.0-beta.3"
+deps.cloth_config = "26.2.155"
 mod.java_compat = ">=25"
 
 # =============================================================================
-# Forge targets (1.16.5 - 1.20.1). Each project is named "<mc>-forge"; the
-# preprocessor still sees the plain Minecraft version (see settings.gradle.kts).
-# New keys used only by these tiers:
-#   deps.forge         - Forge version (verified against the official
-#                        promotions_slim.json "recommended" channel)
-#   deps.cloth_config  - cloth-config-FORGE artifact version (verified against
-#                        maven.shedaniel.me directory listings unless marked)
+# Forge targets (1.16.5 - 1.20.1). Extra keys:
+#   deps.forge / deps.cloth_config (forge artifact)
 #   mod.fml_range      - mods.toml loaderVersion (javafml language = Forge major)
-#   mod.loader_range   - mods.toml dependency range on the loader itself
-#   mod.mc_range_maven - mods.toml Minecraft range in Maven range syntax
-#   mod.pack_format    - pack.mcmeta resource pack format (Forge requires the
-#                        file for the jar's bundled assets to load)
-# The 1.20.1 Forge jar also runs on NeoForge 1.20.1 (fork diverged at 1.20.2),
-# so Modrinth tags it for both loaders (see build.gradle.kts).
+#   mod.loader_range   - dependency range on the loader itself
+#   mod.mc_range_maven - Minecraft range in Maven syntax
+#   mod.pack_format    - pack.mcmeta format (old Forge needs the file for assets)
 # =============================================================================
 
 ["1.16.5-forge"]
-# Range widened: 1.16.4 and 1.16.5 are obfuscation/SRG-identical (1.16.5 was a
-# crash-fix release), so the same jar runs on Forge 35 (1.16.4) and 36 (1.16.5).
-# 1.16-1.16.3 stay out: those are separate Forge majors (32-34) with older SRG
-# snapshots and were never verified.
+# 1.16.4 is obfuscation/SRG-identical to 1.16.5; 1.16-1.16.3 are separate
+# Forge majors and were never verified.
 mod.mc_compat = "1.16.4 1.16.5"
 mod.mc_releases = "1.16.4,1.16.5"
 mod.java_compat = ">=8"
 deps.forge = "36.2.34"
-deps.cloth_config = "4.16.91"        # confirmed on maven.shedaniel.me (forge artifact)
+deps.cloth_config = "4.16.91"
 mod.fml_range = "[35,)"
 mod.loader_range = "[35,)"
 mod.mc_range_maven = "[1.16.4,1.16.5]"
 mod.pack_format = "6"
 
 ["1.17.1-forge"]
-# Stays single-version: Forge never shipped a release for 1.17.0 at all
-# (Forge 37 targets 1.17.1 only), so there is nothing else to cover.
+# Forge never shipped a 1.17.0 release.
 mod.mc_compat = "1.17.1"
 mod.mc_releases = "1.17.1"
 mod.java_compat = ">=16"
 deps.forge = "37.1.1"
-deps.cloth_config = "5.3.63"         # confirmed (forge artifact)
+deps.cloth_config = "5.3.63"
 mod.fml_range = "[37,)"
 mod.loader_range = "[37,)"
 mod.mc_range_maven = "[1.17.1]"
 mod.pack_format = "7"
 
 ["1.18.2-forge"]
-# Stays single-version ON PURPOSE: 1.18/1.18.1 Forge (majors 38/39) predate
-# the fmllegacy -> net.minecraftforge.network package move this code's
-# "forge && >=1.18" gate compiles against, and 1.18.2 changed registries.
-# Widening this one is NOT safe without a real test on 1.18/1.18.1.
+# Single-version on purpose: 1.18/1.18.1 predate the network package move this
+# code compiles against, and 1.18.2 changed registries.
 mod.mc_compat = "1.18.2"
 mod.mc_releases = "1.18.2"
 mod.java_compat = ">=17"
 deps.forge = "40.3.0"
-deps.cloth_config = "6.5.102"        # confirmed (forge artifact)
+deps.cloth_config = "6.5.102"
 mod.fml_range = "[40,)"
 mod.loader_range = "[40,)"
 mod.mc_range_maven = "[1.18.2]"
 mod.pack_format = "8"
 
 ["1.19.2-forge"]
-# Range widened to 1.19-1.19.2 (Forge 41/42/43), matching the Fabric tier: the
-# vanilla API surface this tier compiles against is identical across the three
-# (see the tier grouping at the top), SRG ids are stable within the family, and
-# the one Forge API this code gates on for 1.19 (ClientPlayerNetworkEvent
-# rename) landed at Forge 41 (1.19.0). Client-only mod, no protocol concerns.
 mod.mc_compat = ">=1.19 <=1.19.2"
 mod.mc_releases = "1.19,1.19.1,1.19.2"
 mod.java_compat = ">=17"
 deps.forge = "43.5.0"
-deps.cloth_config = "8.3.115"        # confirmed (forge artifact)
+deps.cloth_config = "8.3.115"
 mod.fml_range = "[41,)"
 mod.loader_range = "[41,)"
 mod.mc_range_maven = "[1.19,1.19.2]"
 mod.pack_format = "9"
 
 ["1.19.4-forge"]
-# Range widened to 1.19.3-1.19.4 (Forge 44/45), matching the Fabric tier's
-# grouping (same vanilla API surface, stable SRG ids, client-only mod).
 mod.mc_compat = ">=1.19.3 <=1.19.4"
 mod.mc_releases = "1.19.3,1.19.4"
 mod.java_compat = ">=17"
 deps.forge = "45.4.0"
-deps.cloth_config = "10.1.135"       # confirmed on maven.shedaniel.me (forge artifact)
+deps.cloth_config = "10.1.135"
 mod.fml_range = "[44,)"
 mod.loader_range = "[44,)"
 mod.mc_range_maven = "[1.19.3,1.19.4]"
 mod.pack_format = "13"
 
 ["1.20.1-forge"]
-# Range widened to 1.20-1.20.1 (Forge 46/47), matching the Fabric tier's
-# grouping. (This jar additionally runs on NeoForge 1.20.1; see build.gradle.kts.)
+# Also runs on NeoForge 1.20.1 (tagged for both loaders in build.gradle.kts).
 mod.mc_compat = ">=1.20 <=1.20.1"
 mod.mc_releases = "1.20,1.20.1"
 mod.java_compat = ">=17"
 deps.forge = "47.4.10"
-deps.cloth_config = "11.1.136"       # confirmed on maven.shedaniel.me (forge artifact)
+deps.cloth_config = "11.1.136"
 mod.fml_range = "[46,)"
 mod.loader_range = "[46,)"
 mod.mc_range_maven = "[1.20,1.20.1]"
 mod.pack_format = "15"
 
 # =============================================================================
-# NeoForge targets (1.20.4 - 26.2; 1.20.1 is covered by the Forge jar).
-#   deps.neoforge      - exact pins where a real artifact was confirmed on
-#                        maven.neoforged.net; Gradle dynamic "x.y.+" where the
-#                        latest build could not be confirmed offline (resolves
-#                        to the newest published build at compile time)
-#   deps.cloth_config  - cloth-config-NEOFORGE artifact version (the neoforge
-#                        listing timed out during verification; numbers mirror
-#                        the fabric pins, which share version numbering)
-#   mod.client_side_only_line - injects clientSideOnly=true into
-#                        neoforge.mods.toml on 1.20.5+ (key did not exist before)
-#   mod.display_test_line     - 1.20.4 only: mods.toml displayTest instead
+# NeoForge targets (1.20.4+; 1.20.1 covered by the Forge jar). Extra keys:
+#   deps.neoforge, deps.cloth_config (neoforge artifact)
+#   mod.client_side_only_line - clientSideOnly=true for neoforge.mods.toml (1.20.5+)
+#   mod.display_test_line     - mods.toml displayTest instead (1.20.4 only)
 # =============================================================================
 
 ["1.20.4-neoforge"]
-# Range widened to 1.20.2-1.20.4 (NeoForge 20.2/20.3/20.4), matching the Fabric
-# tier's grouping. NeoForge runs on official (Mojang) mappings at runtime from
-# 20.2 onward, so one jar covers the whole family; net.neoforged packages and
-# the "neoforge" mod id both exist from 20.2, and mods.toml (not
-# neoforge.mods.toml) is correct for this whole range (the switch is at 1.20.5).
+# Covers 1.20.2-1.20.4: NeoForge runs on official mappings from 20.2 and the
+# mods.toml switch happens at 1.20.5, so one jar covers the family.
 mod.mc_compat = ">=1.20.2 <=1.20.4"
 mod.mc_releases = "1.20.2,1.20.3,1.20.4"
 mod.java_compat = ">=17"
-deps.neoforge = "20.4.237"           # confirmed final 1.20.4 build
-deps.cloth_config = "13.0.138"       # confirmed on maven.shedaniel.me (neoforge artifact)
+deps.neoforge = "20.4.237"
+deps.cloth_config = "13.0.138"
 mod.loader_range = "[20.2,)"
 mod.mc_range_maven = "[1.20.2,1.20.4]"
 mod.pack_format = "22"
 mod.display_test_line = "displayTest=\"IGNORE_ALL_VERSION\""
-# mods.toml loaderVersion (javafml). REQUIRED: this tier uses mods.toml (the
-# neoforge.mods.toml switch happened at 1.20.5), and a missing fml_range
-# expanded to loaderVersion="" - an unparseable range that made NeoForge
-# 1.20.4 silently drop the whole jar from the mod list. "[1,)" matches any
-# javafml version >= 1, which covers every NeoForge build.
+# REQUIRED: this tier still uses mods.toml, and a missing fml_range expands to
+# loaderVersion="" - an unparseable range that makes NeoForge silently drop
+# the whole jar from the mod list.
 mod.fml_range = "[1,)"
 
 ["1.20.6-neoforge"]
-# Range widened to 1.20.5-1.20.6 (NeoForge 20.5/20.6); 1.20.6 was a hotfix of
-# 1.20.5, same API surface (matches the Fabric tier).
 mod.mc_compat = ">=1.20.5 <=1.20.6"
 mod.mc_releases = "1.20.5,1.20.6"
 mod.java_compat = ">=21"
-deps.neoforge = "20.6.119"           # confirmed on maven.neoforged.net
-deps.cloth_config = "14.0.126"       # confirmed on maven.shedaniel.me (neoforge artifact)
+deps.neoforge = "20.6.119"
+deps.cloth_config = "14.0.126"
 mod.loader_range = "[20.5,)"
 mod.mc_range_maven = "[1.20.5,1.20.6]"
 mod.pack_format = "32"
 mod.client_side_only_line = "clientSideOnly=true"
 
 ["1.21.1-neoforge"]
-# Range widened to 1.21-1.21.1 (NeoForge 21.0/21.1), matching the Fabric tier.
 mod.mc_compat = ">=1.21 <=1.21.1"
 mod.mc_releases = "1.21,1.21.1"
 mod.java_compat = ">=21"
-deps.neoforge = "21.1.172"           # confirmed on maven.neoforged.net
-deps.cloth_config = "15.0.140"       # confirmed on maven.shedaniel.me (neoforge artifact)
+deps.neoforge = "21.1.172"
+deps.cloth_config = "15.0.140"
 mod.loader_range = "[21,)"
 mod.mc_range_maven = "[1.21,1.21.1]"
 mod.pack_format = "34"
 mod.client_side_only_line = "clientSideOnly=true"
 
 ["1.21.4-neoforge"]
-# Range widened to 1.21.2-1.21.4 (NeoForge 21.2/21.3/21.4), matching the Fabric
-# tier's grouping (same GuiGraphics/legacy-blit API surface across the family).
 mod.mc_compat = ">=1.21.2 <=1.21.4"
 mod.mc_releases = "1.21.2,1.21.3,1.21.4"
 mod.java_compat = ">=21"
-deps.neoforge = "21.4.157"           # confirmed via maven.neoforged.net latest-version API
-deps.cloth_config = "17.0.144"       # confirmed on maven.shedaniel.me (neoforge artifact)
+deps.neoforge = "21.4.157"
+deps.cloth_config = "17.0.144"
 mod.loader_range = "[21.2,)"
 mod.mc_range_maven = "[1.21.2,1.21.4]"
 mod.pack_format = "46"
 mod.client_side_only_line = "clientSideOnly=true"
 
 ["1.21.5-neoforge"]
-# Stays single-version: 1.21.5 is an isolated tier (RenderPipelines blit was
-# introduced here and the HUD API changed again at 1.21.6), same as on Fabric.
 mod.mc_compat = "1.21.5"
 mod.mc_releases = "1.21.5"
 mod.java_compat = ">=21"
-deps.neoforge = "21.5.97"            # confirmed via maven.neoforged.net latest-version API
-deps.cloth_config = "18.0.145"       # confirmed on maven.shedaniel.me (neoforge artifact)
+deps.neoforge = "21.5.97"
+deps.cloth_config = "18.0.145"
 mod.loader_range = "[21.5,)"
 mod.mc_range_maven = "[1.21.5]"
 mod.pack_format = "55"
 mod.client_side_only_line = "clientSideOnly=true"
 
 ["1.21.8-neoforge"]
-# Range widened to 1.21.6-1.21.8 (NeoForge 21.6/21.7/21.8), matching the Fabric
-# tier's grouping (new HUD + RenderPipelines blit across the whole family).
 mod.mc_compat = ">=1.21.6 <=1.21.8"
 mod.mc_releases = "1.21.6,1.21.7,1.21.8"
 mod.java_compat = ">=21"
-deps.neoforge = "21.8.27"            # confirmed on maven.neoforged.net
-deps.cloth_config = "19.0.147"       # confirmed on maven.shedaniel.me (neoforge artifact)
+deps.neoforge = "21.8.27"
+deps.cloth_config = "19.0.147"
 mod.loader_range = "[21.6,)"
 mod.mc_range_maven = "[1.21.6,1.21.8]"
-mod.pack_format = "64"               # verify
+mod.pack_format = "64"
 mod.client_side_only_line = "clientSideOnly=true"
 
-# ---- 26.1.2-neoforge: non-obfuscated NeoForge (build.neoforge26.gradle.kts) ----
-# Uses ModDevGradle, not Architectury Loom (see build.neoforge26.gradle.kts
-# and PORTING.md round 8f for why). deps.neoforge here is a plain NeoForge
-# version (ModDevGradle's neoForge.version), not a Loom dependency notation.
 ["26.1.2-neoforge"]
+# Ranges must cover ALL of mod.mc_releases (26.1, 26.1.1, 26.1.2), matching
+# the Fabric tier - pinning exactly 26.1.2 gave players on 26.1/26.1.1 a
+# dependency error screen.
 mod.mc_compat = "26.1.2"
 mod.mc_releases = "26.1,26.1.1,26.1.2"
-deps.neoforge = "26.1.2.76"          # confirmed via maven.neoforged.net latest-version API
-deps.cloth_config = "26.1.154"       # confirmed on maven.shedaniel.me (neoforge artifact)
-# Ranges must cover ALL of mod.mc_releases (26.1, 26.1.1, 26.1.2), matching
-# the Fabric 26.1.2 tier's "~26.1". They previously pinned exactly 26.1.2 /
-# NeoForge >=26.1.2, so players on 26.1 or 26.1.1 (NeoForge 26.1.0.x/26.1.1.x)
-# who downloaded this "compatible" file got a dependency error screen.
+deps.neoforge = "26.1.2.76"
+deps.cloth_config = "26.1.154"
 mod.loader_range = "[26.1,)"
 mod.mc_range_maven = "[26.1,26.1.2]"
-mod.pack_format = "80"               # verify
+mod.pack_format = "80"
 mod.client_side_only_line = "clientSideOnly=true"
 mod.java_compat = ">=25"
 
-# ---- 26.2-neoforge: non-obfuscated NeoForge, active/dev version ----
 ["26.2-neoforge"]
 mod.mc_compat = "26.2"
 mod.mc_releases = "26.2"
-deps.neoforge = "26.2.0.7-beta"      # confirmed via maven.neoforged.net latest-version API (newest 26.2 build; still beta)
-deps.cloth_config = "26.2.155"       # confirmed on maven.shedaniel.me (neoforge artifact)
+deps.neoforge = "26.2.0.7-beta"
+deps.cloth_config = "26.2.155"
 mod.loader_range = "[26.2,)"
 mod.mc_range_maven = "[26.2,)"
-mod.pack_format = "80"               # verify
+mod.pack_format = "80"
 mod.client_side_only_line = "clientSideOnly=true"
 mod.java_compat = ">=25"
