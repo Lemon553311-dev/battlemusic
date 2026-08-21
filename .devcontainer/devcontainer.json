@@ -1,11 +1,13 @@
 {
-	"name": "Java",
+	"name": "Battle Music",
 	"image": "mcr.microsoft.com/devcontainers/java:3-25-trixie",
-	"features": {
-		"ghcr.io/devcontainers/features/java:1": {
-			"version": "25",
-			"installMaven": "true",
-			"installGradle": "true"
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"vscjava.vscode-java-pack",
+				"vscjava.vscode-gradle"
+			]
 		}
-	}
+	},
+	"postCreateCommand": "curl -fsSL https://opencode.ai/install | bash"
 }

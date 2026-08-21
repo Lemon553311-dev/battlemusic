@@ -9,12 +9,8 @@ on:
     inputs:
       publish_test:
         description: >-
-          Also run the Modrinth and CurseForge publish steps on every target,
-          in dry-run mode (MODRINTH_DRY_RUN / CURSEFORGE_DRY_RUN = true -
-          validates the tokens/projects/config and
-          prints what would be uploaded, without actually uploading anything).
-          Use this to verify publishing works before cutting a real
-          v* tag release.
+          Also run the Modrinth/CurseForge publish steps on every target in
+          dry-run mode. Use this to verify publishing before cutting a real tag.
         type: boolean
         default: false
 
@@ -22,10 +18,7 @@ permissions:
   contents: write
 
 jobs:
-  # One job per Stonecutter target, running in parallel instead of one job
-  # building all 28 sequentially. Public repo on GitHub-hosted runners has no
-  # per-minute cost, only a concurrency cap (~20 jobs at once on the free
-  # tier), so this trades a single ~30 min job for a batch of few-minute jobs.
+  # One job per Stonecutter target, in parallel.
   build:
     strategy:
       fail-fast: false
@@ -61,12 +54,9 @@ jobs:
           - 26.2-neoforge
     runs-on: ubuntu-latest
     steps:
-      # v6+ runs on Node 24 natively, avoiding the "Node.js 20 is deprecated"
-      # warning GitHub now prints on every job (all 28 matrix jobs otherwise).
       - uses: actions/checkout@v6
 
-      # The Stonecutter nodes target Java 17 / 21 / 25 as a toolchain base;
-      # older per-tier JDKs (8, 16) are auto-downloaded by the foojay resolver.
+      # 17/21/25 as toolchain base; older per-tier JDKs (8, 16) come via foojay.
       - name: Set up JDKs
         uses: actions/setup-java@v5
         with:
@@ -80,15 +70,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # Builds and collects the jar(s) for ONLY this matrix target, instead of
-      # buildAndCollect (no target) which would build every registered version
-      # in this one job.
       - name: Build ${{ matrix.target }}
-        # On a v* tag, MOD_VERSION drives the mod version (e.g. v1.3.0 -> 1.3.0).
-        # It MUST be gated to tags: github.ref_name on a branch push is the
-        # BRANCH NAME, which once shipped jars versioned "forgeimpl". When the
-        # gate leaves it empty, the build scripts fall back to mod.version in
-        # stonecutter.properties.toml.
+        # MOD_VERSION must be gated to tags: github.ref_name on a branch push is
+        # the branch name. Empty -> build scripts fall back to mod.version.
         run: ./gradlew ":${{ matrix.target }}:buildAndCollect" --configure-on-demand --no-daemon
         env:
           MOD_VERSION: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
@@ -100,8 +84,6 @@ jobs:
           rm -f release/*-sources.jar release/*-dev.jar release/*-dev-shadow.jar
           ls -la release
 
-      # One artifact per target (upload-artifact@v4 requires unique names
-      # across a run, unlike v3 which merged same-named uploads).
       - name: Upload build artifact
         uses: actions/upload-artifact@v6
         with:
@@ -109,12 +91,8 @@ jobs:
           path: release/*.jar
           if-no-files-found: error
 
-      # Published per-target, right after that target's own build, instead of
-      # from a separate job - the Gradle project is already configured and
-      # built here, so this avoids a second full rebuild just to publish.
-      # Runs on a real v* tag (real upload) OR a manual publish_test dispatch
-      # (dry run only - see MODRINTH_DRY_RUN below and the workflow_dispatch
-      # input description above).
+      # Published per-target right after its build (project already configured).
+      # Real upload on a v* tag; dry run on a publish_test dispatch.
       - name: Publish ${{ matrix.target }} to Modrinth
         if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish_test)
         run: ./gradlew ":${{ matrix.target }}:modrinth" --configure-on-demand --no-daemon --stacktrace
@@ -135,9 +113,7 @@ jobs:
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
           CURSEFORGE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_test && 'true' || '' }}
 
-  # Runs once, after every matrix job finishes, purely to assemble the GitHub
-  # Release from jars that are already built - no rebuilding here. Only on a
-  # real tag push (a manual publish_test dispatch never creates a release).
+  # Assembles the GitHub Release from the already-built jars. Real tags only.
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
