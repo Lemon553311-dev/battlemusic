@@ -25,29 +25,15 @@ import java.util.List;
 import java.nio.file.Path;
 
 /**
- * The Cloth Config settings screen for every option, shared by ALL loaders:
- *   - Fabric opens it through ModMenu (see {@link ModMenuIntegration}),
- *   - Forge through the mods-list Config button (see ForgeConfigScreen),
- *   - NeoForge likewise (see NeoForgeConfigScreen).
- *
- * This class is ONLY class-loaded when the loader actually opens the screen,
- * so the mod still runs fine without Cloth Config present (it is a soft
- * dependency on every loader). The screen edits the same live
- * {@link BattleMusicConfig} instance the rest of the mod uses, then saves it to
- * disk and notifies the state machine so changes apply immediately.
- *
- * Cloth Config keeps the same me.shedaniel.clothconfig2 packages on Fabric,
- * Forge, and NeoForge, so nothing below is loader-specific (only
- * version-specific; see the //? gates).
+ * The Cloth Config settings screen, shared by all loaders. Only class-loaded
+ * when the screen actually opens, so the mod runs fine without Cloth Config.
  */
 
 public final class ClothConfigScreen {
 
 	private ClothConfigScreen() {}
 
-	// Component.literal(String) only exists on 1.19+ Mojmap; TextComponent is
-	// the equivalent constructor on older versions. Route every UI string
-	// through this helper so the rest of the file stays version-agnostic.
+	// Component.literal is 1.19+, TextComponent before that
 	//? if >=1.19 {
 	private static MutableComponent txt(String s) {
 		return Component.literal(s);
@@ -94,8 +80,7 @@ public final class ClothConfigScreen {
 				.setSaveConsumer(v -> c.debug = v)
 				.build());
 
-		// ---- Songs (second tab): per-folder + per-song volume, preview,
-		// start-at, frequency, and the moved "open folder" shortcut. ----
+		// ---- Songs tab ----
 		buildSongsCategory(builder, eb, c);
 
 		// Detection
@@ -273,15 +258,11 @@ public final class ClothConfigScreen {
 				.setSaveConsumer(v -> c.resumeAggroMobCount = v)
 				.build());
 
-		// Password-gated "Fun" tab. The tab is ALWAYS just called "Fun" in both
-		// states, so it gives nothing away. Entering the code only UNLOCKS the tab
-		// (funUnlocked); it never turns any feature on, so everything inside stays
-		// off until the player flips it. (lastTotemEnabled is still honored as
-		// "unlocked" so configs unlocked before this split don't get re-locked.)
+		// password-gated "Fun" tab; always just called "Fun" so it gives nothing away.
+		// the code only unlocks the tab, features stay off until toggled.
 		boolean funUnlocked = c.funUnlocked || c.lastTotemEnabled;
 		ConfigCategory secret = builder.getOrCreateCategory(txt("Fun"));
 		if (!funUnlocked) {
-			// Locked: give away nothing about what this is or what it does.
 			secret.addEntry(eb.startTextDescription(
 					txt("Got a code? Enter it below and click Save.")
 							.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
@@ -291,13 +272,11 @@ public final class ClothConfigScreen {
 					.setTooltip(txt("Enter a code and click Save."))
 					.setSaveConsumer(v -> {
 						if (v != null && v.trim().equalsIgnoreCase(LastTotemFeature.PASSWORD)) {
-							// Only unlock the tab. Do NOT enable any feature by default.
 							c.funUnlocked = true;
 						}
 					})
 					.build());
 		} else {
-			// Unlocked: reveal the features. Each stays OFF until toggled on.
 			secret.addEntry(eb.startTextDescription(
 					txt("Secret extras. Everything here is off by default \u2014 flip on what you want.")
 							.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
@@ -329,7 +308,7 @@ public final class ClothConfigScreen {
 		return builder.build();
 	}
 
-	// ===== Songs tab =====================================================
+	// ===== Songs tab =====
 
 	private static void buildSongsCategory(ConfigBuilder builder, ConfigEntryBuilder eb, BattleMusicConfig c) {
 		ConfigCategory songs = builder.getOrCreateCategory(txt("Songs"));
@@ -341,7 +320,7 @@ public final class ClothConfigScreen {
 			return;
 		}
 
-		// Refresh so newly added files show up the moment the screen opens.
+		// so new files show up the moment the screen opens
 		lib.rescan();
 
 		songs.addEntry(eb.startTextDescription(txt(
@@ -351,13 +330,8 @@ public final class ClothConfigScreen {
 				.withStyle(s -> s.withColor(ChatFormatting.GRAY)))
 				.build());
 
-		// Where to drop your .ogg files. The path itself is a clickable link that
-		// opens the folder in the OS file browser. Cloth's text entry forwards style
-		// clicks to Screen.handleComponentClicked, which handles the vanilla OPEN_FILE
-		// click event. The ClickEvent API became a sealed record hierarchy in 1.21.5
-		// (ClickEvent.OpenFile), so that branch builds it directly; everything before
-		// (<=1.21.4) uses the classic (Action, String) constructor. Fully-qualified
-		// names keep the import block version-agnostic.
+		// the path is a clickable link that opens the folder in the OS file browser
+		// (vanilla OPEN_FILE click event; sealed record API from 1.21.5)
 		final String musicFolderPath = lib.getRootFolder().toAbsolutePath().toString();
 		//? if >=1.21.5 {
 		MutableComponent folderLink = txt(musicFolderPath).withStyle(s -> s
@@ -410,7 +384,7 @@ public final class ClothConfigScreen {
 			return;
 		}
 
-		// Total saved weight in this folder, for the live (approximate) % readout.
+		// total saved weight, for the approximate % readout
 		double folderTotal = 0.0;
 		for (Path p : tracks) folderTotal += savedWeight(c, lib.keyFor(p));
 		final double folderTotalAtOpen = folderTotal;
