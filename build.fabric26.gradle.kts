@@ -1,19 +1,8 @@
-// Build script for the two non-obfuscated Fabric targets (26.1.2, 26.2).
-// Architectury Loom cannot build Minecraft 26.1+ at all (see settings.gradle.kts
-// and PORTING.md round 8f), so these two targets use mainline Fabric Loom
-// instead, in its non-obfuscated mode (the plugin id itself, net.fabricmc.
-// fabric-loom, denotes non-obf mode on 26.1+; see docs.fabricmc.net/develop/loom).
-//
-// This is a SEPARATE file from build.gradle.kts on purpose (a documented
-// Stonecutter feature - see the .buildscript assignments in settings.gradle.kts)
-// so this plugin never shares a script with Architectury Loom. Mixing multiple
-// Loom-family plugins in one script previously broke every target's DSL
-// accessors (PORTING.md round 8e); physically separate files avoid that
-// entirely, since each script's accessors come only from its own plugin.
-//
-// Deliberately mirrors build.gradle.kts's structure (java toolchain block,
-// processResources templating, buildAndCollect, modrinth block) wherever the
-// same shape applies, so the two scripts stay easy to compare.
+// Build script for the non-obfuscated Fabric targets (26.1.2, 26.2).
+// Mainline Fabric Loom in its non-obf mode - Architectury Loom can't build
+// 26.1+ and must never share a script with this plugin (see settings.gradle.kts).
+// No mappings() call (nothing is obfuscated) and no modImplementation/remapJar
+// (non-obf Loom has no remapping machinery) - plain implementation + jar.
 
 plugins {
 	id("net.fabricmc.fabric-loom")
@@ -43,8 +32,7 @@ java {
 
 repositories {
 	maven("https://maven.terraformersmc.com/releases") { name = "TerraformersMC" }
-	// See build.gradle.kts for why this exists: the TerraformersMC maven
-	// intermittently 400s on specific Mod Menu jars.
+	// fallback for Mod Menu when the TerraformersMC maven 400s (see build.gradle.kts)
 	exclusiveContent {
 		forRepository { maven("https://api.modrinth.com/maven") { name = "Modrinth" } }
 		filter { includeGroup("maven.modrinth") }
@@ -54,16 +42,7 @@ repositories {
 
 dependencies {
 	minecraft("com.mojang:minecraft:$mcVersion")
-	// No mappings() call: Minecraft 26.1+ ships non-obfuscated (real names
-	// already), so there is nothing to map - this is the whole reason
-	// Architectury Loom cannot build these versions but mainline Loom can.
 
-	// Plain implementation, NOT modImplementation: Fabric Loom's non-obfuscated
-	// mode has no remapping machinery at all (there is nothing to remap - see
-	// the mappings comment above), so it does not define modImplementation
-	// either. Confirmed by a real CI failure (round 8g): only minecraft(...)
-	// resolved in this file; every modImplementation call and both remapJar/
-	// remapSourcesJar (further below) came back "Unresolved reference".
 	implementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
 	implementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
 
@@ -86,33 +65,20 @@ tasks {
 			"minecraft" to project.property("mod.mc_compat"),
 			"loader" to (project.findProperty("mod.loader_compat") ?: ""),
 			"java" to project.property("mod.java_compat"),
-			// 26.1+ removed the pre-1.19.3 "fabric" alias entirely; only
-			// "fabric-api" is valid here (see stonecutter.properties.toml).
+			// 26.1+ removed the old "fabric" alias; only "fabric-api" is valid.
 			"fabric_api_id" to "fabric-api",
-			// Fabric API runtime range; "*" on these tiers (only 1.16.5 needs a
-			// real floor - see stonecutter.properties.toml).
 			"fabric_api_compat" to (project.findProperty("mod.fabric_api_compat") ?: "*"),
 		)
 		props.forEach { (key, value) -> inputs.property(key, value) }
 		filesMatching("fabric.mod.json") { expand(props) }
-		// Keep this jar's resources scoped to Fabric metadata only.
-		// battlemusic_icon.png is the Forge/NeoForge mod-list logo; Fabric uses
-		// the assets path from fabric.mod.json.
 		exclude("META-INF/mods.toml", "META-INF/neoforge.mods.toml", "pack.mcmeta", "battlemusic_icon.png")
 	}
 
 	register<Copy>("buildAndCollect") {
 		group = "build"
 		description = "Builds the mod and collects jars into build/libs/<mod version>/"
-		// Deliberately NOT referencing jar/sourcesJar/remapJar tasks by name or
-		// accessor here at all - every prior attempt at that (bare accessor,
-		// reified named<T>(), untyped named() + cast) failed to compile for a
-		// different reason each time in real CI. Instead: depend on the
-		// standard "build" lifecycle task (guaranteed to exist on every Gradle
-		// project) and copy everything Gradle already put in build/libs/,
-		// which is the fixed, universal default output directory for archive
-		// tasks (jar, sourcesJar) on every JVM project regardless of which
-		// loader plugin is applied. This needs zero task-name knowledge.
+		// depend on "build" and copy build/libs/ - no jar/remapJar task-name
+		// knowledge needed (task accessors differ between the loom variants)
 		dependsOn("build")
 		from(layout.buildDirectory.dir("libs"))
 		into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
@@ -127,9 +93,6 @@ modrinth {
 	versionName.set("Battle Music $modVersion ($mcVersion, fabric)")
 	versionType.set("release")
 
-	// Minotaur's own README shows exactly this form (uploadFile.set(tasks.jar)),
-	// warning only that Fabric/Forge Loom (remapping loaders) must use
-	// remapJar instead - non-obf Loom has no remapJar, so plain jar is right.
 	uploadFile.set(tasks.jar)
 
 	gameVersions.set(
@@ -147,9 +110,7 @@ modrinth {
 	changelog.set(System.getenv("CHANGELOG") ?: "See the GitHub release for changes.")
 }
 
-// Mirror of the modrinth block above, for CurseForge. See build.gradle.kts for
-// the full commentary. This variant uses the plain `jar` output (non-obf Loom
-// has no remapJar) and is always Fabric.
+// CurseForge mirror of the block above.
 tasks.register<net.darkhax.curseforgegradle.TaskPublishCurseForge>("publishCurseforge") {
 	group = "publishing"
 	description = "Uploads this version's jar to CurseForge."
@@ -159,9 +120,7 @@ tasks.register<net.darkhax.curseforgegradle.TaskPublishCurseForge>("publishCurse
 	debugMode = System.getenv("CURSEFORGE_DRY_RUN") == "true"
 	disableVersionDetection()
 
-	// project.property(...) qualification is REQUIRED here - see the note in
-	// build.gradle.kts's publishCurseforge block (bare property() resolves
-	// against the task, not the project, and fails at configuration time).
+	// must be project.property(...) here - bare property() resolves against the task
 	val mainFile = upload(
 		project.property("mod.curseforge_id") as String,
 		tasks.jar.flatMap { it.archiveFile }
@@ -174,11 +133,9 @@ tasks.register<net.darkhax.curseforgegradle.TaskPublishCurseForge>("publishCurse
 	(project.property("mod.mc_releases") as String).split(",").map { it.trim() }
 		.forEach { mainFile.addGameVersion(it) }
 	mainFile.addModLoader("Fabric")
-	// Required on all new Minecraft files from 2026-07-15; this mod is client-only.
 	mainFile.addEnvironment("Client")
-	// No Java tag: "Java 25" could not be confirmed in CurseForge's tag list
-	// at the time of writing (an unknown tag fails upload validation). Add
-	// mainFile.addJavaVersion("Java 25") once confirmed.
+	// no Java tag: "Java 25" isn't confirmed in CurseForge's tag list yet
+	// (an unknown tag fails upload validation)
 
 	mainFile.addRequirement("fabric-api")
 	mainFile.addOptional("modmenu")
