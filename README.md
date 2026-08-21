@@ -1,4 +1,4 @@
-# Minecraft Battle Music mod for Fabric
+# Minecraft Battle Music mod
 
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.16.5+-green)
 ![Minecraft](https://img.shields.io/badge/Minecraft-26.2+-green)
@@ -18,8 +18,8 @@ This mod plays your imported music during mob/PVP battles.
 
 ## Dependencies
 
-1. Requires [Fabric Loader](https://fabricmc.net/use/)
-2. [Fabric API](https://modrinth.com/mod/fabric-api)
+1. Fabric: [Fabric Loader](https://fabricmc.net/use/) + [Fabric API](https://modrinth.com/mod/fabric-api)
+2. Forge / NeoForge: matching loader for your Minecraft version
 3. (optional, very recommended) [Mod Menu](https://modrinth.com/mod/modmenu) and [Cloth Config](https://modrinth.com/mod/cloth-config)
 
 

@@ -26,18 +26,9 @@ import org.apache.logging.log4j.Logger;
 *///?}
 
 /**
- * Loader-neutral core of the mod + the Fabric client entrypoint.
- *
- * Multi-loader layout (Stonecutter //? fabric/forge/neoforge constants):
- *   - Fabric: this class IS the entrypoint (ClientModInitializer) and wires
- *     the Fabric lifecycle/tick/disconnect events to the static hooks below.
- *   - Forge:    {@link BattleMusicForge} constructs everything via init() and
- *     wires the equivalent Forge events to the same hooks.
- *   - NeoForge: {@link BattleMusicNeoForge}, same idea.
- * Everything the mod actually does lives behind the static hooks, so the three
- * bootstraps stay tiny.
- *
- * im gonna lose my mind with this holy shit.
+ * Loader-neutral core + the Fabric client entrypoint. Fabric wires its events
+ * to the static hooks below; BattleMusicForge / BattleMusicNeoForge do the
+ * same for their loaders, so the bootstraps stay tiny.
  */
 //? if fabric {
 public class BattleMusicClient implements ClientModInitializer {
@@ -71,11 +62,7 @@ public class BattleMusicClient implements ClientModInitializer {
 	}
 	//?}
 
-	/**
-	 * Loader-neutral startup: config, music library, audio engine, state
-	 * machine, and the secret features. Called once from the Fabric entrypoint
-	 * or the Forge/NeoForge mod constructors (client dist only).
-	 */
+	// loader-neutral startup, called from every loader's entrypoint
 	public static void init() {
 		config = BattleMusicConfig.load();
 		//dir regular/heavy battle
@@ -91,7 +78,6 @@ public class BattleMusicClient implements ClientModInitializer {
 		lastTotem = new LastTotemFeature(config);
 		lastTotem.init();
 
-		// Secret, password-gated "Last Heart Standing" visual (off unless unlocked + enabled).
 		lastHeart = new LastHeartFeature(config);
 		lastHeart.init();
 
@@ -107,23 +93,23 @@ public class BattleMusicClient implements ClientModInitializer {
 				config.playerDamageWindowSeconds, config.playerCombatTimeoutSeconds);
 	}
 
-	/** The client finished starting up -> bring up the OpenAL audio engine. */
+	/** client started -> bring up the audio engine */
 	public static void onClientStarted() {
 		if (audioEngine != null) audioEngine.init();
 	}
 
-	/** The client is shutting down -> stop music and release OpenAL resources. */
+	/** shutting down -> stop music, release resources */
 	public static void onClientStopping() {
 		if (stateMachine != null) stateMachine.reset();
 		if (audioEngine != null) audioEngine.shutdown();
 	}
 
-	/** End of every client tick -> drive the battle state machine. */
+	/** every client tick -> drive the state machine */
 	public static void onEndClientTick(Minecraft client) {
 		if (stateMachine != null) stateMachine.onClientTick(client);
 	}
 
-	/** Left a world/server -> stop the music immediately. */
+	/** left a world/server -> stop the music */
 	public static void onDisconnect() {
 		if (stateMachine != null) stateMachine.reset();
 	}

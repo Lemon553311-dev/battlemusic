@@ -8,32 +8,24 @@ import net.minecraft.world.entity.monster.warden.Warden;
 //?}
 
 /**
- *
- * A few mob types leak their aggressive state through synced entity data, so we
- * can read them directly instead of guessing from movement. These are treated
- * as strong "definitely aggroed" signals.
- *
- * Mojang official mappings (Minecraft 26.1):
- *   Creeper.getSwellDir() (>0 while fusing) / Creeper.isIgnited()
- *   EnderMan.isCreepy() (provoked/aggressive)
- *   Warden (presence in range is enough)
+ * Mob types that leak their aggressive state through synced entity data -
+ * read directly instead of guessing from movement.
  */
 
 public final class HostileStateSignals {
 	private HostileStateSignals() {}
 
 	public static boolean isObviouslyAggressive(Mob mob) {
-		// Creeper actively fusing toward an explosion.
+		// creeper actively fusing
 		if (mob instanceof Creeper) {
 			Creeper creeper = (Creeper) mob;
 			if (creeper.getSwellDir() > 0 || creeper.isIgnited()) return true;
 		}
-		// Enderman angry state is synced for the screaming animation.
+		// enderman screaming = provoked
 		if (mob instanceof EnderMan) {
 			EnderMan enderMan = (EnderMan) mob;
 			if (enderMan.isCreepy()) return true;
 		}
-		// Warden anger drives synced animations. Warden does not exist before 1.19.
 		//? if >=1.19 {
 		if (mob instanceof Warden) {
 			return true;

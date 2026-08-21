@@ -44,52 +44,36 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.sounds.SoundSource;
 
 /**
- * "Last Heart Standing" - a secret, password-gated visual (sibling of
- * {@link me.lemon553311.battlemusic.lasttotem.LastTotemFeature}).
- *
- * It flashes an image in the centre of the screen the moment a HEAVY battle
- * starts SPECIFICALLY because the player's health dropped to/under the heavy HP
- * threshold (the low-HP escalation). By design it does NOT fire for PvP-driven
- * heavy, bosses, or big swarms - only the low-HP trigger, as requested.
- *
- * Multi-version notes (Stonecutter //? directives below):
- *   - HUD registration: HudElementRegistry on 1.21.6+, HudRenderCallback before.
- *   - Class names: Identifier/GuiGraphicsExtractor on 26.1+, ResourceLocation/
- *     GuiGraphics on 1.20-1.21.x, ResourceLocation/PoseStack+GuiComponent
- *     before 1.20 (official Mojang mappings renamed/removed these classes at
- *     the GuiGraphics introduction and again at the non-obf switch).
- *   - Draw call: RenderPipelines blit overload on 1.21.5+, the legacy scaled
- *     GuiGraphics blit + RenderSystem tint on 1.20-1.21.4, the PoseStack +
- *     GuiComponent static blit helper (with a manual texture bind) before 1.20.
+ * "Last Heart Standing" - secret password-gated visual, sibling of
+ * LastTotemFeature. Flashes an image when a HEAVY battle starts specifically
+ * from the low-HP threshold - not for pvp, bosses, or swarms.
  */
+
 public final class LastHeartFeature {
 
-	// Bundled at assets/battlemusic/textures/gui/last_heart_standing.png
 	//? if >=26.1 {
 	/*private static final Identifier IMAGE = mkId("textures/gui/last_heart_standing.png");
 	*///?} else {
 	private static final ResourceLocation IMAGE = mkId("textures/gui/last_heart_standing.png");
 	//?}
-	// Native pixel size of that PNG, used for aspect-correct scaling.
 	private static final int IMG_W = 1023;
 	private static final int IMG_H = 667;
 
-	// use the same sound as the totem alert
+	// same sound as the totem alert
 	private static final String SOUND = "/assets/battlemusic/lts/LRS_StartSound.ogg";
 
-	// Opacity animation: 0.20 -> 0.70 over PHASE1, then 0.70 -> 0.00 over PHASE2.
+	// opacity: 0.20 -> 0.70 over phase1, then -> 0 over phase2
 	private static final double PHASE1_SECONDS = 3.0;
 	private static final double PHASE2_SECONDS = 1.0;
 	private static final float ALPHA_START = 0.20f;
 	private static final float ALPHA_PEAK = 0.70f;
 	private static final float ALPHA_END = 0.00f;
 
-	// Inset from every screen edge -> the image is centred in the remaining box.
 	private static final float EDGE_INSET = 0.30f;
 
 	private final BattleMusicConfig config;
 
-	// Animation state: written when triggered, read on the render thread.
+	// written when triggered, read on the render thread
 	private volatile boolean animActive = false;
 	private volatile long animStartNanos = 0L;
 
@@ -98,10 +82,7 @@ public final class LastHeartFeature {
 	}
 
 	public void init() {
-		// HUD hook per loader/version; the drawing itself is shared (onHudRender).
 		//? if fabric && >=1.21.6 {
-		// HudRenderCallback no longer exists in 1.21.6+. Register a HUD element
-		// that draws right before the chat layer, exactly like the totem overlay.
 		HudElementRegistry.attachElementBefore(
 				VanillaHudElements.CHAT,
 				mkId("last_heart_standing"),
@@ -121,18 +102,12 @@ public final class LastHeartFeature {
 		*///?}
 	}
 
-	/**
-	 * Called by the state machine when a heavy battle starts purely from the
-	 * low-HP threshold (no PvP / boss / swarm). No-op unless the feature is on.
-	 */
+	// called by the state machine when heavy starts purely from low hp
 	public void onHeavyFromLowHp() {
 		if (config == null || !config.lastHeartEnabled) return;
 		BattleMusicClient.debug("Last Heart Standing: heavy battle from low HP -> flashing image + sound");
-		// (Re)start the overlay animation from the top.
 		animStartNanos = System.nanoTime();
 		animActive = true;
-		// Play the alert at the player's master volume, on the mod's own audio path
-		// (same fire-and-forget Ogg player the totem alert uses).
 		Minecraft client = Minecraft.getInstance();
 		if (client != null) {
 			float master = client.options.getSoundSourceVolume(SoundSource.MASTER);
@@ -150,7 +125,6 @@ public final class LastHeartFeature {
 	/*private void onHudRender(PoseStack matrices) {
 	*///?}
 		if (!animActive) return;
-		// If the feature was switched off mid-animation, stop drawing immediately.
 		if (config == null || !config.lastHeartEnabled) {
 			animActive = false;
 			return;
@@ -168,14 +142,12 @@ public final class LastHeartFeature {
 		int screenW = mc.getWindow().getGuiScaledWidth();
 		int screenH = mc.getWindow().getGuiScaledHeight();
 
-		// 30% inset from each side -> central box is 40% wide and 40% tall.
 		int boxX = Math.round(screenW * EDGE_INSET);
 		int boxY = Math.round(screenH * EDGE_INSET);
 		int boxW = screenW - 2 * boxX;
 		int boxH = screenH - 2 * boxY;
 		if (boxW <= 0 || boxH <= 0) return;
 
-		// Fit the image inside that box, preserving aspect ratio.
 		float scale = Math.min(boxW / (float) IMG_W, boxH / (float) IMG_H);
 		int drawW = Math.max(1, Math.round(IMG_W * scale));
 		int drawH = Math.max(1, Math.round(IMG_H * scale));
@@ -183,11 +155,9 @@ public final class LastHeartFeature {
 		int drawY = boxY + (boxH - drawH) / 2;
 
 		int a = Math.max(0, Math.min(255, Math.round(alpha * 255f)));
-		int color = (a << 24) | 0x00FFFFFF; // white tint, animated alpha (ARGB)
+		int color = (a << 24) | 0x00FFFFFF; // white tint, animated alpha
 
 		//? if >=1.21.6 {
-		// 1.21.6+ blit: (pipeline, texture, x, y, u, v, drawW, drawH,
-		//                regionW, regionH, texW, texH, argbColor).
 		graphics.blit(
 				RenderPipelines.GUI_TEXTURED,
 				IMAGE,
@@ -198,9 +168,7 @@ public final class LastHeartFeature {
 				IMG_W, IMG_H,
 				color);
 		//?} elif >=1.21.2 {
-		/*// 1.21.2-1.21.5 blit: same 13-arg shape, but the first parameter is a
-		// Function<ResourceLocation, RenderType> (RenderType::guiTextured) rather
-		// than a RenderPipeline. The RenderPipeline overload only exists in 1.21.6+.
+		/*// 1.21.2-1.21.5: same shape, first arg is RenderType::guiTextured
 		graphics.blit(
 				RenderType::guiTextured,
 				IMAGE,
@@ -211,10 +179,7 @@ public final class LastHeartFeature {
 				IMG_W, IMG_H,
 				color);
 		*///?} elif >=1.20 {
-		/*// Legacy (1.20-1.21.4) scaled blit: tint via RenderSystem shader color.
-		// VERIFY on build - the GuiGraphics.blit overload shape shifted a few
-		// times across 1.20.1 / 1.21.0-1.21.4; see PORTING.md for the exact
-		// signatures per version if this does not resolve.
+		/*// legacy scaled blit, tint via shader color
 		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
 		graphics.blit(
@@ -227,9 +192,7 @@ public final class LastHeartFeature {
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
 		*///?} elif >=1.17 {
-		/*// 1.17-1.19.x: GuiGraphics does not exist yet, but the 1.17 RenderSystem
-		// shader API (setShaderTexture/setShaderColor) does. Draw via the PoseStack
-		// + GuiComponent static blit helper, tinting through the shader color.
+		/*// pre-GuiGraphics: PoseStack + GuiComponent.blit, shader-color tint
 		com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, IMAGE);
 		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
@@ -243,9 +206,7 @@ public final class LastHeartFeature {
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
 		*///?} else {
-		/*// 1.16.5 (Java 8): the 1.17 RenderSystem shader API does not exist yet.
-		// Bind the texture via the TextureManager and tint with the legacy
-		// fixed-function color4f call, then use the same GuiComponent blit helper.
+		/*// 1.16.5: no 1.17 shader API; TextureManager bind + fixed-function color4f
 		mc.getTextureManager().bind(IMAGE);
 		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
 		com.mojang.blaze3d.systems.RenderSystem.color4f(1f, 1f, 1f, alpha);
@@ -270,11 +231,8 @@ public final class LastHeartFeature {
 		return ResourceLocation.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
 	}
 	//?} else {
-	/*// The 2-arg ResourceLocation constructor is deprecated-for-removal on
-	// newer Minecraft, but it is the only option pre-1.21 (fromNamespaceAndPath
-	// does not exist yet there) - suppressed rather than left as noise, since
-	// these pre-1.21 tiers are pinned and will never see this code updated out
-	// from under them.
+	/*// 2-arg constructor is deprecated-for-removal on newer MC but is the only
+	// option pre-1.21
 	@SuppressWarnings({"deprecation", "removal"})
 	private static ResourceLocation mkId(String path) {
 		return new ResourceLocation(BattleMusicClient.MOD_ID, path);

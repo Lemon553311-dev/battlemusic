@@ -17,14 +17,7 @@ import java.util.stream.Stream;
 
 /**
  * Owns the on-disk music folders and the random track picker.
- *
- * Layout (created automatically on first launch):
- *   /battlemusic/Regular Battle/
- *   /battlemusic/Heavy Battle/
- *
- * Only Ogg Vorbis (.ogg) is supported.
- * STB Vorbis decoder reads without any dependency.
- * See the README for a one-line ffmpeg command to convert MP3/WAV to OGG.
+ * /battlemusic/Regular Battle/ and /battlemusic/Heavy Battle/, .ogg only.
  */
 
 public class MusicLibrary {
@@ -35,25 +28,21 @@ public class MusicLibrary {
 	private final List<Path> regular = new ArrayList<>();
 	private final List<Path> heavy = new ArrayList<>();
 
-	// Remember the last track per category so re-rolls avoid immediate repeats.
+	// last track per category so re-rolls avoid immediate repeats
 	private Path lastRegular;
 	private Path lastHeavy;
 	private Path lastBoth;
 
-	// Cached folder modification times so we can rescan only when a folder
-	// actually changed (avoids disk I/O on the render thread when nothing did).
+	// cached folder mtimes so rescanIfChanged() is cheap
 	private long lastRegularMtime = 0L;
 	private long lastHeavyMtime = 0L;
 
-	// Files STB Vorbis failed to open/decode this session (e.g. Ogg OPUS rips or
-	// corrupt downloads). Without this, a broken track could be re-picked, spawn a
-	// playback thread and fail again EVERY TICK when it was the only track in its
-	// folder, spamming the log 20x/second. Static so both channels and every
-	// picker see the same set; cleared on rescan so a fixed/replaced file gets
-	// retried once the folder changes.
+	// files stb failed to decode this session (e.g. ogg opus rips). without this,
+	// a single broken track gets re-picked and fails every tick, spamming the log.
+	// cleared on rescan so a fixed file gets retried.
 	private static final Set<String> UNPLAYABLE = ConcurrentHashMap.newKeySet();
 
-	/** Mark a file as undecodable for this session. Returns true only the first time. */
+	// mark a file undecodable for this session; true only the first time
 	public static boolean markUnplayable(Path p) {
 		return p != null && UNPLAYABLE.add(p.toAbsolutePath().toString());
 	}
@@ -96,10 +85,9 @@ public class MusicLibrary {
 		}
 	}
 
-	// Re-read both folders from disk. Updates the cached mtimes so a follow-up rescanIfChanged() is a no-op until the folders change again.
+	// rescan from disk
 	public synchronized void rescan() {
-		// Folder contents changed: forget decode failures so replaced/re-encoded
-		// files get another chance.
+		// folder changed: forget decode failures so replaced files get another chance
 		UNPLAYABLE.clear();
 		regular.clear();
 		heavy.clear();
@@ -141,11 +129,9 @@ public class MusicLibrary {
 		return heavy.size();
 	}
 
-	// Counts that EXCLUDE files blacklisted as undecodable this session. The pickers
-	// only ever choose from these, so loop/re-roll decisions must use them too: with
-	// the raw counts, a folder holding one playable and one broken file reported "2",
-	// so the lone playable track got loop=false and played with a restart gap between
-	// repeats instead of looping seamlessly.
+	// counts excluding files blacklisted this session. the pickers only choose
+	// from these, so loop/re-roll decisions must use them too (raw counts made a
+	// lone playable track play with restart gaps instead of looping).
 	public synchronized int playableRegularCount() {
 		return playable(regular).size();
 	}
@@ -153,7 +139,7 @@ public class MusicLibrary {
 		return playable(heavy).size();
 	}
 
-	// Snapshots of the current track lists (used by the mod-menu Songs tab).
+	// snapshots for the mod-menu Songs tab
 	public synchronized List<Path> regularTracks() {
 		return new ArrayList<>(regular);
 	}
@@ -161,7 +147,7 @@ public class MusicLibrary {
 		return new ArrayList<>(heavy);
 	}
 
-	/** Stable per-song key: "<folder>/<filename>", matching the config map keys. */
+	// "<folder>/<filename>", matching the config map keys
 	public String keyFor(Path p) {
 		if (p == null) return "";
 		Path parent = p.getParent();
@@ -181,13 +167,13 @@ public class MusicLibrary {
 		return cfg.songSettings.get(keyFor(p));
 	}
 
-	/** Seconds into this track where playback should start, from its per-song setting. */
+	// seconds into the track where playback starts (per-song setting)
 	public double startSecondsFor(Path p) {
 		BattleMusicConfig.SongSetting s = settingFor(p);
 		return (s != null) ? Math.max(0.0, s.startSeconds) : 0.0;
 	}
 
-	/** Folder volume * per-song volume for this track (1.0 = unchanged). */
+	// folder volume * per-song volume
 	public float effectiveVolumeFor(Path p) {
 		BattleMusicConfig cfg = BattleMusicClient.config();
 		double folderVol = 1.0;
@@ -203,8 +189,7 @@ public class MusicLibrary {
 		return Math.max(0.0, w);
 	}
 
-	// Weighted random pick honouring per-song weights, still avoiding an immediate
-	// repeat. Falls back to uniform when every weight is zero.
+	// weighted random pick, avoiding an immediate repeat; uniform if all weights are 0
 	private Path pickWeighted(List<Path> list, Path avoid) {
 		if (list.isEmpty()) return null;
 		if (list.size() == 1) return list.get(0);
@@ -242,7 +227,7 @@ public class MusicLibrary {
 		return lastHeavy;
 	}
 
-	// Picks a track from the union of both folders (used by the PvP trigger when its pool is BOTH).
+	// union of both folders (pvp trigger with pool=BOTH)
 	public synchronized Path pickBoth() {
 		List<Path> reg = playable(regular);
 		List<Path> hvy = playable(heavy);
@@ -260,12 +245,8 @@ public class MusicLibrary {
 		return lastBoth;
 	}
 
-	/**
-	 * Rescan only if a music folder's modification time changed since the last
-	 * scan. Folder mtime updates when entries are added or removed (file content
-	 * edits do NOT touch it — fine for us). Cheap stat keeps the "drop new files
-	 * in mid-session" UX without paying disk I/O on every battle start.
-	 */
+	// rescan only if a folder mtime changed (folder mtime updates on add/remove,
+	// not on in-place file edits - fine for us)
     public synchronized boolean rescanIfChanged() {
 		long regMtime = folderMtime(root.resolve(REGULAR_DIR));
 		long hvyMtime = folderMtime(root.resolve(HEAVY_DIR));

@@ -55,55 +55,40 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 /**
- * "Last Totem Standing" - a secret, password-gated alert.
- *
- * When the feature is unlocked (see the mod menu) it watches the player's totem
- * count every client tick. The moment that count falls to exactly ONE remaining
- * it plays a bundled alert sound and flashes an image in the centre of the
- * screen, fading 20% -> 70% over 3s, then 70% -> 0% over 1s.
- *
- * Multi-version notes (Stonecutter //? directives below):
- *   - HUD registration: HudElementRegistry on 1.21.6+, HudRenderCallback before.
- *   - Class names: Identifier/GuiGraphicsExtractor on 26.1+, ResourceLocation/
- *     GuiGraphics on 1.20-1.21.x, ResourceLocation/PoseStack+GuiComponent
- *     before 1.20.
- *   - Draw call: RenderPipelines blit overload on 1.21.5+, the legacy scaled
- *     GuiGraphics blit + RenderSystem tint on 1.20-1.21.4, the PoseStack +
- *     GuiComponent static blit helper (with a manual texture bind) before 1.20.
- * Everything else (totem counting, tick logic, audio) is version-agnostic.
+ * "Last Totem Standing" - secret password-gated alert: watches the totem count
+ * every tick and fires a sound + image flash when it drops to exactly one.
  */
+
 public final class LastTotemFeature {
 
 	// good job you found the password to this not so hidden feature. Have fun!
 	// Input it in the "Advanced" tab in the modmenu (or just enable it in the config lmao)
 	public static final String PASSWORD = "lmao";
 
-	// Bundled at assets/battlemusic/textures/gui/last_totem_standing.png
 	//? if >=26.1 {
 	/*private static final Identifier IMAGE = mkId("textures/gui/last_totem_standing.png");
 	*///?} else {
 	private static final ResourceLocation IMAGE = mkId("textures/gui/last_totem_standing.png");
 	//?}
-	// Native pixel size of that PNG, used for aspect-correct scaling.
 	private static final int IMG_W = 1023;
 	private static final int IMG_H = 667;
 
-	// Opacity animation: 0.20 -> 0.70 over PHASE1, then 0.70 -> 0.00 over PHASE2.
+	// opacity: 0.20 -> 0.70 over phase1, then -> 0 over phase2
 	private static final double PHASE1_SECONDS = 3.0;
 	private static final double PHASE2_SECONDS = 1.0;
 	private static final float ALPHA_START = 0.20f;
 	private static final float ALPHA_PEAK = 0.70f;
 	private static final float ALPHA_END = 0.00f;
 
-	// Inset from every screen edge -> the image is centred in the remaining box.
+	// inset from every screen edge; image is centred in the remaining box
 	private static final float EDGE_INSET = 0.30f;
 
 	private final BattleMusicConfig config;
 
-	// Tick-thread state: last sampled total totem count (-1 = not sampled yet).
+	// last sampled total totem count (-1 = not sampled yet)
 	private int lastTotemCount = -1;
 
-	// Animation state: written on the client-tick thread, read on the render thread.
+	// written on the client tick, read on the render thread
 	private volatile boolean animActive = false;
 	private volatile long animStartNanos = 0L;
 
@@ -112,8 +97,7 @@ public final class LastTotemFeature {
 	}
 
 	public void init() {
-		// Tick source per loader; the totem-counting logic itself is shared
-		// (onClientTick) and loader-neutral.
+		// tick source per loader; counting logic is shared
 		//? if fabric {
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 		//?} elif forge {
@@ -128,10 +112,8 @@ public final class LastTotemFeature {
 		});
 		*///?}
 
-		// HUD hook per loader/version; the drawing itself is shared (onHudRender).
+		// HUD hook per loader/version
 		//? if fabric && >=1.21.6 {
-		// HudRenderCallback no longer exists in 1.21.6+. Register a HUD element
-		// instead; it draws right before the chat layer.
 		HudElementRegistry.attachElementBefore(
 				VanillaHudElements.CHAT,
 				mkId("last_totem_standing"),
@@ -164,12 +146,12 @@ public final class LastTotemFeature {
 
 		int count = countTotems(player);
 		if (lastTotemCount < 0) {
-			// First sample after enabling / joining a world: set the baseline only.
+			// first sample: baseline only
 			lastTotemCount = count;
 			return;
 		}
 
-		// Falling edge to exactly one remaining: had two (or more), one just popped.
+		// falling edge to exactly one remaining
 		if (lastTotemCount >= 2 && count == 1) {
 			trigger(client);
 		}
@@ -183,15 +165,14 @@ public final class LastTotemFeature {
 		/*Inventory inv = player.inventory;
 		*///?}
 		int total = 0;
-		// The Inventory container spans hotbar + main + armor + offhand in vanilla.
 		int size = inv.getContainerSize();
 		for (int i = 0; i < size; i++) {
 			if (isTotem(inv.getItem(i))) {
 				total += inv.getItem(i).getCount();
 			}
 		}
-		// A totem held on the mouse cursor lives on the open menu, not the Inventory
-		// container, so count it here too to avoid a false dip to 1.
+		// a totem held on the cursor lives on the open menu, not the inventory;
+		// count it too to avoid a false dip to 1
 		if (player.containerMenu != null) {
 			//? if >=1.17 {
 			ItemStack carried = player.containerMenu.getCarried();
@@ -211,10 +192,8 @@ public final class LastTotemFeature {
 
 	private void trigger(Minecraft client) {
 		BattleMusicClient.debug("Last Totem Standing: one totem remaining -> firing alert");
-		// (Re)start the overlay animation from the top.
 		animStartNanos = System.nanoTime();
 		animActive = true;
-		// Play the alert at the player's master volume, on the mod's own audio path.
 		float master = client.options.getSoundSourceVolume(SoundSource.MASTER);
 		if (master > 0.0001f) {
 			OneShotSound.play(master);
@@ -242,14 +221,14 @@ public final class LastTotemFeature {
 		int screenW = mc.getWindow().getGuiScaledWidth();
 		int screenH = mc.getWindow().getGuiScaledHeight();
 
-		// 30% inset from each side -> central box is 40% wide and 40% tall.
+		// 30% inset from each side
 		int boxX = Math.round(screenW * EDGE_INSET);
 		int boxY = Math.round(screenH * EDGE_INSET);
 		int boxW = screenW - 2 * boxX;
 		int boxH = screenH - 2 * boxY;
 		if (boxW <= 0 || boxH <= 0) return;
 
-		// Fit the image inside that box, preserving aspect ratio.
+		// fit inside the box, aspect preserved
 		float scale = Math.min(boxW / (float) IMG_W, boxH / (float) IMG_H);
 		int drawW = Math.max(1, Math.round(IMG_W * scale));
 		int drawH = Math.max(1, Math.round(IMG_H * scale));
@@ -257,11 +236,9 @@ public final class LastTotemFeature {
 		int drawY = boxY + (boxH - drawH) / 2;
 
 		int a = Math.max(0, Math.min(255, Math.round(alpha * 255f)));
-		int color = (a << 24) | 0x00FFFFFF; // white tint, animated alpha (ARGB)
+		int color = (a << 24) | 0x00FFFFFF; // white tint, animated alpha
 
 		//? if >=1.21.6 {
-		// 1.21.6+ blit: (pipeline, texture, x, y, u, v, drawW, drawH,
-		//                regionW, regionH, texW, texH, argbColor).
 		graphics.blit(
 				RenderPipelines.GUI_TEXTURED,
 				IMAGE,
@@ -272,9 +249,7 @@ public final class LastTotemFeature {
 				IMG_W, IMG_H,
 				color);
 		//?} elif >=1.21.2 {
-		/*// 1.21.2-1.21.5 blit: same 13-arg shape, but the first parameter is a
-		// Function<ResourceLocation, RenderType> (RenderType::guiTextured) rather
-		// than a RenderPipeline. The RenderPipeline overload only exists in 1.21.6+.
+		/*// 1.21.2-1.21.5: same shape, first arg is RenderType::guiTextured
 		graphics.blit(
 				RenderType::guiTextured,
 				IMAGE,
@@ -285,9 +260,7 @@ public final class LastTotemFeature {
 				IMG_W, IMG_H,
 				color);
 		*///?} elif >=1.20 {
-		/*// Legacy (1.20-1.21.4) scaled blit: tint via RenderSystem shader color.
-		// VERIFY on build - see PORTING.md for the exact blit signature per
-		// version if this does not resolve on 1.20.1 / 1.21.0-1.21.4.
+		/*// legacy scaled blit, tint via shader color
 		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
 		graphics.blit(
@@ -300,9 +273,7 @@ public final class LastTotemFeature {
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
 		*///?} elif >=1.17 {
-		/*// 1.17-1.19.x: GuiGraphics does not exist yet, but the 1.17 RenderSystem
-		// shader API (setShaderTexture/setShaderColor) does. Draw via the PoseStack
-		// + GuiComponent static blit helper, tinting through the shader color.
+		/*// pre-GuiGraphics: PoseStack + GuiComponent.blit, shader-color tint
 		com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, IMAGE);
 		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
@@ -316,9 +287,7 @@ public final class LastTotemFeature {
 		com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 		com.mojang.blaze3d.systems.RenderSystem.disableBlend();
 		*///?} else {
-		/*// 1.16.5 (Java 8): the 1.17 RenderSystem shader API does not exist yet.
-		// Bind the texture via the TextureManager and tint with the legacy
-		// fixed-function color4f call, then use the same GuiComponent blit helper.
+		/*// 1.16.5: no 1.17 shader API; TextureManager bind + fixed-function color4f
 		mc.getTextureManager().bind(IMAGE);
 		com.mojang.blaze3d.systems.RenderSystem.enableBlend();
 		com.mojang.blaze3d.systems.RenderSystem.color4f(1f, 1f, 1f, alpha);
@@ -343,11 +312,8 @@ public final class LastTotemFeature {
 		return ResourceLocation.fromNamespaceAndPath(BattleMusicClient.MOD_ID, path);
 	}
 	//?} else {
-	/*// The 2-arg ResourceLocation constructor is deprecated-for-removal on
-	// newer Minecraft, but it is the only option pre-1.21 (fromNamespaceAndPath
-	// does not exist yet there) - suppressed rather than left as noise, since
-	// these pre-1.21 tiers are pinned and will never see this code updated out
-	// from under them.
+	/*// 2-arg constructor is deprecated-for-removal on newer MC but is the only
+	// option pre-1.21
 	@SuppressWarnings({"deprecation", "removal"})
 	private static ResourceLocation mkId(String path) {
 		return new ResourceLocation(BattleMusicClient.MOD_ID, path);

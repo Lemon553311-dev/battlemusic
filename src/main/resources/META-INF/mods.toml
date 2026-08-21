@@ -1,7 +1,5 @@
-# Forge (1.16.5 - 1.20.1) and NeoForge 1.20.4 mod metadata. The placeholders
-# below are filled by processResources from stonecutter.properties.toml per
-# tier. This file is excluded from Fabric jars and from NeoForge >=1.20.5
-# jars (those use META-INF/neoforge.mods.toml instead).
+# Forge (1.16.5 - 1.20.1) and NeoForge 1.20.4 metadata; placeholders are
+# filled by processResources per tier.
 modLoader="javafml"
 loaderVersion="${fml_range}"
 license="MIT"
@@ -12,10 +10,7 @@ modId="battlemusic"
 version="${version}"
 displayName="${name}"
 displayURL="https://modrinth.com/mod/battle-music"
-# Must be a bare filename at the JAR ROOT - no slashes. Forge's Mods screen
-# loads this via vanilla's root-resource lookup when the mod entry is clicked,
-# and that lookup throws IllegalArgumentException on any path containing '/'
-# (confirmed crash on 1.16.5; root filenames work on every version).
+# bare filename at the jar root - a path with '/' crashes the Mods screen
 logoFile="battlemusic_icon.png"
 authors="Lemon553311"
 description='''Plays your own imported music during fights! Client-side, smooth fades, dynamic changes, very customizable.'''

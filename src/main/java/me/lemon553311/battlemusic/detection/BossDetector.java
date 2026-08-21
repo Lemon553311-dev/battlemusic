@@ -25,22 +25,10 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- *
- * Detects special bosses near the player. Any boss present forces heavy battle
- * music and uses its own (larger) radius, since bosses are big fights that the
- * normal "5 mobs" rule would not capture.
- *
- * Built-ins: Ender Dragon, Wither, Warden. Add more via config.extraBossIds
- * (e.g. "minecraft:elder_guardian").
- *
- * Note: we intentionally do NOT import the registry-key class (its package
- * changed in 26.1). Comparing the registry key's string form keeps this robust
- * across mapping/refactor changes.
- *
- * Multi-version notes (Stonecutter //? directives below):
- *   - Registries moved from Registry.ENTITY_TYPE to BuiltInRegistries.ENTITY_TYPE
- *     starting exactly at 1.19.3.
- *   - Warden does not exist before 1.19 and is gated out entirely pre-1.19.
+ * Detects bosses near the player; any boss forces heavy battle music with its
+ * own (larger) radius. Built-ins: Ender Dragon, Wither, Warden, plus
+ * config.extraBossIds. Registry keys are compared as strings - we intentionally
+ * never import the registry-key class since its name changed in 26.1.
  */
 
 public class BossDetector {
@@ -48,14 +36,11 @@ public class BossDetector {
 	// Normalized entity ids, e.g. "minecraft:elder_guardian".
 	private final Set<String> extraBossIds = new HashSet<>();
 
-	// Throttle: bosses don't move ~48 blocks in 500 ms; scanning every tick wastes
-	// the largest entity sweep the mod does. Cache the answer for a short window
-	// and re-scan periodically. Reaction delay is at most CHECK_INTERVAL_TICKS
-	// (10 = 0.5 s), which is shorter than the music fade-in anyway.
+	// bosses don't move ~48 blocks in 500ms; cache the answer for a short window.
+	// reaction delay is at most 0.5s, shorter than the music fade-in anyway.
 	private static final long CHECK_INTERVAL_TICKS = 10L;
 
-	// Built-in "sub-boss" tier: tough single mobs the normal "5 mobs" rule misses.
-	// Matched by registry id (no fragile imports), gated by config.includeMiniBosses.
+	// tough single mobs the normal "5 mobs" rule misses, matched by registry id
 	private static final Set<String> MINI_BOSS_IDS = new HashSet<>(Arrays.asList(
 			"minecraft:elder_guardian",
 			"minecraft:ravager",
@@ -85,9 +70,8 @@ public class BossDetector {
 		lastResult = false;
 	}
 
-	// {@code now} is a monotonic client-tick counter supplied by the state machine,
-	// NOT world.getGameTime(); on time-locked servers a frozen getGameTime() pinned the
-	// throttle so the boss scan never re-ran after its first call.
+	// now is a monotonic client-tick counter, NOT world.getGameTime() - a frozen
+	// getGameTime() on time-locked servers pinned the throttle forever
 	public boolean anyBossNearby(LocalPlayer player, ClientLevel world, long now) {
 		if (player == null || world == null) return false;
 		if (lastCheckTick != Long.MIN_VALUE && now >= lastCheckTick && now - lastCheckTick < CHECK_INTERVAL_TICKS) {
@@ -128,9 +112,8 @@ public class BossDetector {
 			return false;
 		}
 		EntityType<?> type = e.getType();
-		// Never name the registry-key type: it is ResourceLocation up to 1.21.x but
-		// was renamed to Identifier in 26.1. Calling toString() inline keeps this
-		// robust across that rename (and needs no import at all).
+		// never name the registry-key type (renamed ResourceLocation -> Identifier in
+		// 26.1); toString() inline needs no import at all
 		//? if >=1.19.3 {
 		String id = BuiltInRegistries.ENTITY_TYPE.getKey(type).toString();
 		//?} else {

@@ -21,41 +21,24 @@ import static org.lwjgl.stb.STBVorbis.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 /**
- * Fire-and-forget one-shot Ogg Vorbis player for the Last Totem Standing alert.
- *
- * This deliberately reuses the exact decode/playback approach proven in
- * {@link me.lemon553311.battlemusic.audio.MusicChannel} (STB Vorbis -> Java
- * Sound on a daemon thread), so it does not depend on Minecraft's OpenAL sound
- * engine or its sound-event registry at all.
- *
- * The bundled .ogg is read from the jar into memory once and decoded with
- * stb_vorbis_open_memory. It is deliberately NOT extracted to a temp file:
- * stb_vorbis_open_filename goes through C fopen(), which on Windows expects
- * the legacy ANSI codepage, so a non-ASCII Windows user name (e.g. a Cyrillic
- * account -> C:\Users\&lt;name&gt;\AppData\Local\Temp\...) made the alert fail
- * to open silently. Decoding from memory has no file path to break.
+ * Fire-and-forget one-shot ogg player for the secret alerts. Same approach as
+ * MusicChannel (stb + javax.sound on a daemon thread), no OpenAL involvement.
+ * The bundled ogg is decoded from memory: stb_vorbis_open_filename goes through
+ * C fopen(), which breaks on non-ASCII Windows user names.
  */
 public final class OneShotSound {
 	private OneShotSound() {}
 
 	private static final int SAMPLES_PER_CHUNK = 4096; // per channel
-	// Default alert used by the no-resource play(gain) overload (Last Totem Standing).
 	private static final String RESOURCE = "/assets/battlemusic/lts/LRS_StartSound.ogg";
 
-	// In-memory copies of the bundled oggs, keyed by classpath resource path.
-	// Each distinct sound is read from the jar once (they are small).
+	// in-memory copies of the bundled oggs, read from the jar once
 	private static final ConcurrentHashMap<String, byte[]> LOADED = new ConcurrentHashMap<>();
 
-	/** Play the default Last Totem Standing alert once at the given gain (0..1). */
 	public static void play(float gain) {
 		play(RESOURCE, gain);
 	}
 
-	/**
-	 * Play a bundled one-shot ogg (by classpath resource path) once at the given
-	 * gain (0..1), on its own daemon thread. Lets each secret "Fun" alert ship its
-	 * own sound without touching Minecraft's OpenAL sound engine.
-	 */
 	public static void play(String resource, float gain) {
 		final float g = Math.max(0f, Math.min(1f, gain));
 		Thread t = new Thread(() -> {
@@ -81,7 +64,7 @@ public final class OneShotSound {
 					BattleMusicClient.LOGGER.warn("[lts] bundled sound not found on classpath at {}", resource);
 					return null;
 				}
-				// InputStream#readAllBytes is Java 9+; the 1.16.5 tier builds on Java 8.
+				// readAllBytes is Java 9+; 1.16.5 builds on Java 8
 				ByteArrayOutputStream out = new ByteArrayOutputStream(64 * 1024);
 				byte[] buf = new byte[8192];
 				int n;
@@ -164,8 +147,7 @@ public final class OneShotSound {
 				try { stb_vorbis_close(decoder); } catch (Throwable ignored) {}
 			}
 			if (encoded != null) {
-				// Freed only after the decoder is closed: stb reads from this
-				// buffer for the decoder's whole lifetime.
+				// freed after the decoder: stb reads from it for its whole lifetime
 				try { MemoryUtil.memFree(encoded); } catch (Throwable ignored) {}
 			}
 		}

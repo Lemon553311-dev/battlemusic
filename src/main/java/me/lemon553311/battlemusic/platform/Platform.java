@@ -11,19 +11,14 @@ import net.fabricmc.loader.api.FabricLoader;
 import java.nio.file.Path;
 
 /**
- * Loader-neutral access to the game/config directories.
- *
- * Multi-loader notes (Stonecutter //? directives):
- *   - Fabric exposes both through FabricLoader.
- *   - Forge and NeoForge both expose them through FMLPaths; only the package
- *     differs (net.minecraftforge.fml.loading before the NeoForge fork rename,
- *     net.neoforged.fml.loading after), so the method bodies are shared.
+ * Loader-neutral access to the game/config directories. FMLPaths on
+ * Forge/NeoForge (same class name, different package), FabricLoader on Fabric.
  */
 public final class Platform {
 
 	private Platform() {}
 
-	/** The .minecraft (game) directory, where the battlemusic/ music folder lives. */
+	/** .minecraft, where the battlemusic/ folder lives */
 	public static Path gameDir() {
 		//? if fabric {
 		return FabricLoader.getInstance().getGameDir();
@@ -32,7 +27,7 @@ public final class Platform {
 		*///?}
 	}
 
-	/** The config/ directory, where battlemusic.json lives. */
+	/** config/, where battlemusic.json lives */
 	public static Path configDir() {
 		//? if fabric {
 		return FabricLoader.getInstance().getConfigDir();

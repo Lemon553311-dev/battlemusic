@@ -21,20 +21,9 @@ import static org.lwjgl.stb.STBVorbis.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 /**
- *
- * One playback voice. Streams an Ogg Vorbis file on its own daemon thread: it
- * decodes a small chunk at a time with STB Vorbis (the decoder LWJGL/Minecraft
- * already ships), scales the samples by the current (faded) gain, and writes
- * them to a Java Sound {@link SourceDataLine}. Writing to the line blocks until
- * the buffer has room, which paces playback in real time with no busy-loop.
- *
- * Nothing here touches Minecraft's OpenAL sound engine, and no decoding happens
- * on the render thread, so there is no audio-context conflict and no freezing.
- *
- * The public API is identical to the previous OpenAL version, so the state
- * machine does not change: gain/fades are advanced by {@link #update(double)}
- * on the client tick thread (cheap float math) and merely read by the playback
- * thread.
+ * One playback voice: streams an ogg on a daemon thread via STB Vorbis +
+ * javax.sound, independent of Minecraft's OpenAL engine. Gains/fades are
+ * advanced by update() on the client tick and only read here.
  */
 
 public class MusicChannel {
@@ -44,23 +33,19 @@ public class MusicChannel {
 	private final String name;
 
 	private volatile float currentGain = 0f;  // 0..1, pre-master
-	private volatile float targetGain = 0f;    // 0..1, pre-master
+	private volatile float targetGain = 0f;
 	private float fadeRate = 0f;               // gain units per second
 	private boolean stopWhenSilent = false;
 	private volatile float outputVolume = 1f;
-	// Per-track gain (folder volume * per-song volume from config; 1 = unchanged).
+	// folder volume * per-song volume from config
 	private volatile float trackGain = 1f;
 
 	private volatile Path loaded;
 	private volatile Thread playThread;
 	private volatile boolean running = false;
-	// per-playback run gate. each start() gets its own flag, stopThread() trips it.
-	// a fresh thread never shares a flag with an old one, so a stale thread always
-	// dies and can't be revived by a later start. kills the rare double-playback.
+	// per-playback gate so a stale thread can never be revived by a later start()
 	private volatile AtomicBoolean activeFlag;
-	// Per-channel sample-frame offset of the next sample to decode, updated as
-	// playback advances. Used by the "battle resume" feature to pick up where a
-	// track faded out instead of restarting from the beginning
+	// sample frame offset of the next sample to decode (for battle resume)
 	private volatile long playbackFrame = 0L;
 
 	public MusicChannel(AudioEngine engine, String name) {
@@ -73,20 +58,13 @@ public class MusicChannel {
 		return start(oggPath, loop, 0L, 0.0);
 	}
 
-	/**
-	 * Load + start a track, beginning playback at {@code startFrame} (a per-channel
-	 * sample offset; 0 = from the start). Resets gain to 0 so the caller can fade
-	 * it in. Used by "battle resume" to continue a track where it left off.
-	 */
+	// startFrame = sample offset to resume from (battle resume)
 	public boolean start(Path oggPath, boolean loop, long startFrame) {
 		return start(oggPath, loop, startFrame, 0.0);
 	}
 
-	/**
-	 * Same as above but, on a fresh (non-resume) start, begins playback
-	 * {@code startSeconds} into the track (the per-song "start at" setting).
-	 * Ignored when {@code startFrame > 0} so a battle resume always wins.
-	 */
+	// startSeconds: begin N seconds in (per-song "start at"), ignored when
+	// resuming from a frame
 	public boolean start(Path oggPath, boolean loop, long startFrame, double startSeconds) {
 
 		if (!engine.isReady() || oggPath == null) return false;
@@ -140,13 +118,12 @@ public class MusicChannel {
 		this.outputVolume = Math.max(0f, Math.min(1f, volume));
 	}
 
-	// Per-track gain (folder volume * per-song volume). May exceed 1 to boost a
-	// quiet track; the per-sample write below clamps to the 16-bit range.
+	// per-track gain, may exceed 1 to boost a quiet track (clamped per sample)
 	public void setTrackGain(float gain) {
 		this.trackGain = Math.max(0f, gain);
 	}
 
-	// Advance the fade. Call once per tick with real dt. Cheap, no audio.
+	// advance the fade, once per tick
 	public void update(double dtSeconds) {
 		if (currentGain != targetGain) {
 			float step = (float) (fadeRate * dtSeconds);
@@ -169,9 +146,8 @@ public class MusicChannel {
 	public float getCurrentGain() {
 		return currentGain;
 	}
-	// where the fade is heading (0..1). lets the state machine check if the channel
-	// got pushed down vs already heading up, so it doesn't re-fire a fade-in every
-	// tick and stomp the continuation fade.
+	// where the fade is heading, so the state machine doesn't re-fire a fade-in
+	// that's already running
 	public float getTargetGain() {
 		return targetGain;
 	}
@@ -181,11 +157,10 @@ public class MusicChannel {
 	public Path getLoaded() {
 		return loaded;
 	}
-	// Per-channel sample-frame offset currently being played (for battle resume)
 	public long getPlaybackFrame() {
 		return playbackFrame;
 	}
-	// True once the playback thread has stopped (e.g. a non-looping track ended)
+	// true once the playback thread stopped (e.g. a non-looping track ended)
 	public boolean isFinished() {
 
 		Thread t = playThread;
@@ -211,9 +186,7 @@ public class MusicChannel {
 			BattleMusicClient.debug("[{}] stopping playback thread", name);
 			t.interrupt(); // wake it if blocked, the gate above guarantees it cannot resume
 		}
-	}
-
-	private void streamLoop(Path path, boolean loop, long startFrame, double startSeconds, AtomicBoolean alive) {
+	}	private void streamLoop(Path path, boolean loop, long startFrame, double startSeconds, AtomicBoolean alive) {
 		long decoder = NULL;
 		SourceDataLine line = null;
 		ShortBuffer pcm = null;
@@ -221,14 +194,9 @@ public class MusicChannel {
 
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			IntBuffer error = stack.mallocInt(1);
-			// Read the file in Java and decode from memory instead of using
-			// stb_vorbis_open_filename: LWJGL hands stb the path as UTF-8 bytes,
-			// but stb opens it with C fopen(), which on Windows expects the legacy
-			// ANSI codepage. Any non-ASCII track name (Cyrillic, diacritics, CJK,
-			// emoji) - or a non-ASCII Windows user name anywhere in the path -
-			// failed to open and the battle stayed silent. Reading through
-			// java.nio sidesteps the OS path layer entirely. (Vanilla decodes Ogg
-			// from streams for the same reason.)
+			// read the file and decode from memory instead of stb_vorbis_open_filename:
+			// stb opens paths with C fopen(), which on Windows uses the legacy ANSI
+			// codepage, so any non-ASCII track/user name failed to open
 			byte[] fileBytes = Files.readAllBytes(path);
 			encoded = MemoryUtil.memAlloc(fileBytes.length);
 			encoded.put(fileBytes);
@@ -258,19 +226,14 @@ public class MusicChannel {
 				return;
 			}
 
-            // Battle resume uses a frame offset; the per-song "start at" uses
-            // seconds, converted to frames now that we know the sample rate. A
-            // resume frame always wins over start-at seconds. If the seek fails
-            // (e.g. the file changed length), fall back to the start.
+			// resume uses a frame offset; "start at" uses seconds. a resume wins.
 			long seekFrame = startFrame;
 			if (seekFrame <= 0L && startSeconds > 0.0) {
 				seekFrame = (long) (startSeconds * sampleRate);
 			}
-			// All playbackFrame writes on this thread are guarded by alive.get():
-			// a stale thread that loses a stopThread() race can still be blocked
-			// inside line.write() for up to ~0.2s, and an unguarded write after
-			// that clobbered the frame a freshly started playback had just set,
-			// corrupting the battle-resume position of the NEW track.
+			// guard playbackFrame writes with alive.get(): a stale thread losing the
+			// stopThread() race can still be blocked in line.write() for a bit, and an
+			// unguarded write would clobber the NEW track's resume position
 			if (seekFrame > 0L) {
 				if (!stb_vorbis_seek(decoder, (int) seekFrame)) {
 					BattleMusicClient.debug("[{}] seek to frame {} failed; starting from 0", name, seekFrame);
@@ -285,12 +248,8 @@ public class MusicChannel {
 			AudioFormat format = new AudioFormat(sampleRate, 16, channels, true, false); // signed, little-endian
 			DataLine.Info dlInfo = new DataLine.Info(SourceDataLine.class, format);
 			line = (SourceDataLine) AudioSystem.getLine(dlInfo);
-			// Explicit small line buffer (2 decode chunks, ~0.19s at 44.1 kHz).
-			// The implementation default is often ~0.5s or more, and since gain is
-			// baked into the samples at write time, fades / the volume slider
-			// lagged behind by the whole buffer (and the resume position ran ahead
-			// of what was audible). Two chunks keeps fades snappy while leaving a
-			// full chunk of slack against dropouts.
+			// small explicit buffer (~2 chunks): the default is often ~0.5s+, and since
+			// gain is baked in at write time, fades would lag by the whole buffer
 			line.open(format, SAMPLES_PER_CHUNK * channels * 2 * 2);
 			line.start();
 			BattleMusicClient.debug("[{}] playing {} @ {} Hz, {} ch", name, path.getFileName(), sampleRate, channels);
@@ -312,9 +271,8 @@ public class MusicChannel {
 						continue;
 					}
 					if (loop) {
-						// The track was just restarted and still produced nothing:
-						// broken file. Bail out instead of spinning this thread at
-						// 100% CPU on seek_start/read forever.
+						// restarted but still no samples: broken file, bail instead of
+						// spinning at 100% CPU forever
 						BattleMusicClient.LOGGER.warn("[{}] {} produced no samples after a loop restart; stopping playback", name, path.getFileName());
 						MusicLibrary.markUnplayable(path);
 					} else {
@@ -352,24 +310,19 @@ public class MusicChannel {
 				try { stb_vorbis_close(decoder); } catch (Throwable ignored) {}
 			}
 			if (encoded != null) {
-				// Freed only after the decoder is closed: stb reads from this
-				// buffer for the decoder's whole lifetime.
+				// freed after the decoder: stb reads from it for its whole lifetime
 				try { MemoryUtil.memFree(encoded); } catch (Throwable ignored) {}
 			}
-			// Only the still-current playback may clear shared status, so a stale
-			// thread finishing never clobbers a freshly started one
+			// only the still-current playback may clear shared status
 			if (activeFlag == alive) {
 				running = false;
 			}
 		}
 	}
 
-	// Decode-failure diagnostics, written to the game log (console + latest.log).
-	// The #1 real-world cause is an "Ogg" file that is actually Ogg OPUS (YouTube
-	// rippers and online converters commonly produce these), which STB Vorbis
-	// cannot decode. Reported once per file per session; the blacklist in
-	// MusicLibrary also keeps the picker off the file, so a broken track can't be
-	// re-rolled and re-fail every tick.
+	// decode-failure diagnostics. most common real-world cause: an "ogg" that is
+	// actually Ogg OPUS (youtube rippers produce these). reported once per file
+	// per session; the blacklist keeps the picker off the file afterwards.
 	private void warnUnplayable(Path path, byte[] fileBytes) {
 		if (!MusicLibrary.markUnplayable(path)) return; // already reported this session
 		if (looksLikeOpus(fileBytes)) {
@@ -388,7 +341,7 @@ public class MusicChannel {
 	}
 
 	private static boolean looksLikeOpus(byte[] bytes) {
-		// The first Ogg page of an Opus stream carries the ASCII magic "OpusHead".
+		// OpusHead magic in the first Ogg page
 		int limit = Math.min(bytes.length, 512) - 8;
 		for (int i = 0; i <= limit; i++) {
 			if (bytes[i] == 'O' && bytes[i + 1] == 'p' && bytes[i + 2] == 'u' && bytes[i + 3] == 's'
