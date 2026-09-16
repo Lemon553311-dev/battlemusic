@@ -9,5 +9,5 @@
 			]
 		}
 	},
-	"postCreateCommand": "curl -fsSL https://opencode.ai/install | bash"
+	"postCreateCommand": "curl -fsSL https://opencode.ai/install | bash && sudo apt update && sudo apt install -y git-lfs"
 }
