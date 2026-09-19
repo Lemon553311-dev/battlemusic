@@ -2,7 +2,7 @@
 
 ## What this is
 
-Client-side Minecraft mod ("Battle Music", package `me.lemon553311.battlemusic`). ONE source tree in `src/main/java` produces **28 jars** via [Stonecutter](https://stonecutter.kikugie.dev/): 14 Fabric + 6 Forge + 8 NeoForge targets spanning Minecraft 1.16.5–26.2. There are no tests or linters — verifying a change means making every tier *compile*.
+Client-side Minecraft mod ("Battle Music", package `me.lemon553311.battlemusic`). ONE source tree in `src/main/java` produces **30 jars** via [Stonecutter](https://stonecutter.kikugie.dev/): 15 Fabric + 6 Forge + 9 NeoForge targets spanning Minecraft 1.16.5–26.3. There are no tests or linters — verifying a change means making every tier *compile*.
 
 ## Commands
 
@@ -33,7 +33,7 @@ Client-side Minecraft mod ("Battle Music", package `me.lemon553311.battlemusic`)
 ## Build scripts: three, deliberately
 
 - `build.gradle.kts` (Architectury Loom): every target ≤1.21.8, all loaders (platform comes from `loom.platform` in each `versions/<id>/gradle.properties`).
-- `build.fabric26.gradle.kts` (mainline Fabric Loom, non-obf mode) and `build.neoforge26.gradle.kts` (ModDevGradle): the four 26.1+ targets, wired via `.buildscript = ...` in `settings.gradle.kts`.
+- `build.fabric26.gradle.kts` (mainline Fabric Loom, non-obf mode) and `build.neoforge26.gradle.kts` (ModDevGradle): the six 26.1+ targets, wired via `.buildscript = ...` in `settings.gradle.kts`.
 - Architectury Loom **cannot** build 26.1+ (requires mappings that no longer exist; upstream bug architectury/architectury-loom#328). Never declare two Loom-family plugins in one script — Kotlin DSL accessor generation breaks for *every* target, not just the special-cased ones.
 
 ## Code layout
@@ -49,4 +49,4 @@ Client-side Minecraft mod ("Battle Music", package `me.lemon553311.battlemusic`)
 
 ## Releasing
 
-Pushing a `v*` tag triggers `release.yml`: builds all 28 targets in parallel and publishes to Modrinth + CurseForge (secrets `MODRINTH_TOKEN`/`CURSEFORGE_TOKEN`; mod version taken from the tag). Manual dispatch offers a `publish_test` checkbox = full dry run of both publish steps. Tagless/local builds fall back to `mod.version` in `stonecutter.properties.toml`.
+Pushing a `v*` tag triggers `release.yml`: builds all 30 targets in parallel and publishes to Modrinth + CurseForge (secrets `MODRINTH_TOKEN`/`CURSEFORGE_TOKEN`; mod version taken from the tag). Manual dispatch offers a `publish_test` checkbox = full dry run of both publish steps. Tagless/local builds fall back to `mod.version` in `stonecutter.properties.toml`.

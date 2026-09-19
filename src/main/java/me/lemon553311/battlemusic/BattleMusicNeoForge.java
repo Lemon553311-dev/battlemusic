@@ -1,6 +1,6 @@
 package me.lemon553311.battlemusic;
 
-// NeoForge (1.20.4 - 26.2) bootstrap; collapses to a placeholder on other
+// NeoForge (1.20.4 - 26.3) bootstrap; collapses to a placeholder on other
 // loaders. (NeoForge 1.20.1 needs no target - it runs the Forge 1.20.1 jar.)
 // Tick event split into Pre/Post at 1.20.5; client-only marking lives in the
 // metadata (displayTest / clientSideOnly).
@@ -55,7 +55,7 @@ public final class BattleMusicNeoForge {
 		/*NeoForge.EVENT_BUS.addListener(
 				(ClientPlayerNetworkEvent.LoggingOut e) -> BattleMusicClient.onDisconnect());
 
-		// no client-stopping event spans 1.20.4-26.2
+		// no client-stopping event spans 1.20.4-26.3
 		Runtime.getRuntime().addShutdownHook(
 				new Thread(BattleMusicClient::onClientStopping, "battlemusic-shutdown"));
 

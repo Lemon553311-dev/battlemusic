@@ -1,6 +1,6 @@
 package me.lemon553311.battlemusic.config;
 
-// Registers the mods-list "Config" button on NeoForge (1.20.4 - 26.2).
+// Registers the mods-list "Config" button on NeoForge (1.20.4 - 26.3).
 // 1.20.4: Forge-style ConfigScreenHandler.ConfigScreenFactory.
 // 1.20.5+: IConfigScreenFactory - registered directly (not wrapped in a
 // Supplier, the overloads are ambiguous for a nested lambda); the factory

@@ -20,7 +20,7 @@ pluginManagement {
 		// breaks Kotlin DSL accessor generation for every target.
 		id("dev.architectury.loom") version "1.17-SNAPSHOT"
 		id("net.fabricmc.fabric-loom") version "1.17.+"   // build.fabric26.gradle.kts only
-		id("net.neoforged.moddev") version "2.0.141"      // build.neoforge26.gradle.kts only
+		id("net.neoforged.moddev") version "2.0.147"      // build.neoforge26.gradle.kts only
 	}
 }
 
@@ -70,8 +70,10 @@ stonecutter {
 		// the plugins they need. ----
 		version("26.1.2-fabric", "26.1.2").buildscript = "build.fabric26.gradle.kts"
 		version("26.2-fabric", "26.2").buildscript = "build.fabric26.gradle.kts"
+		version("26.3-fabric", "26.3").buildscript = "build.fabric26.gradle.kts"
 		version("26.1.2-neoforge", "26.1.2").buildscript = "build.neoforge26.gradle.kts"
 		version("26.2-neoforge", "26.2").buildscript = "build.neoforge26.gradle.kts"
+		version("26.3-neoforge", "26.3").buildscript = "build.neoforge26.gradle.kts"
 
 		vcsVersion = "1.21.8-fabric"
 	}

@@ -141,9 +141,15 @@ public class PlayerDamageTracker {
 
 			if (e instanceof Player) {
 				Player other = (Player) e;
-				if (other.isAlive() && other.swinging
+				//? if >=26.3 {
+				if (other.isAlive() && other.isSwinging()
 						&& other.distanceToSqr(self) <= reachSq
 						&& facingToward(other, self)) {
+				//?} else {
+				/*if (other.isAlive() && other.swinging
+						&& other.distanceToSqr(self) <= reachSq
+						&& facingToward(other, self)) {
+				*///?}
 					lastMeleeThreatTick = now;
 					lastMeleeAttackerId = other.getId();
 				}

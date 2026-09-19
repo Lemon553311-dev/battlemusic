@@ -2,7 +2,11 @@ package me.lemon553311.battlemusic.detection;
 
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Creeper;
-import net.minecraft.world.entity.monster.EnderMan;
+//? if >=26.3 {
+import net.minecraft.world.entity.monster.Enderman;
+//?} else {
+/*import net.minecraft.world.entity.monster.EnderMan;
+*///?}
 //? if >=1.19 {
 import net.minecraft.world.entity.monster.warden.Warden;
 //?}
@@ -22,10 +26,17 @@ public final class HostileStateSignals {
 			if (creeper.getSwellDir() > 0 || creeper.isIgnited()) return true;
 		}
 		// enderman screaming = provoked
-		if (mob instanceof EnderMan) {
+		//? if >=26.3 {
+		if (mob instanceof Enderman) {
+			Enderman enderMan = (Enderman) mob;
+			if (enderMan.isCreepy()) return true;
+		}
+		//?} else {
+		/*if (mob instanceof EnderMan) {
 			EnderMan enderMan = (EnderMan) mob;
 			if (enderMan.isCreepy()) return true;
 		}
+		*///?}
 		//? if >=1.19 {
 		if (mob instanceof Warden) {
 			return true;
