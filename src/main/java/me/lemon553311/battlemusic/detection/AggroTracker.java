@@ -144,12 +144,12 @@ public class AggroTracker {
 			if (!enemy) {
 				if (!config.includeAttackingNeutrals) continue;
 				//? if >=26.3 {
-				boolean meleeAtUs = mob.isSwinging() && distSq <= NEUTRAL_REACH_SQ
+				/*boolean meleeAtUs = mob.isSwinging() && distSq <= NEUTRAL_REACH_SQ
 						&& isHeadAimedAtPlayer(mob, player, playerEye);
-				//?} else {
-				/*boolean meleeAtUs = mob.swinging && distSq <= NEUTRAL_REACH_SQ
+				*///?} else {
+				boolean meleeAtUs = mob.swinging && distSq <= NEUTRAL_REACH_SQ
 						&& isHeadAimedAtPlayer(mob, player, playerEye);
-				*///?}
+				//?}
 				if (meleeAtUs || shootingAtUs) neutralCombatTick.put(id, now);
 				Long nt = neutralCombatTick.get(id);
 				if (nt == null || now - nt > NEUTRAL_COMBAT_WINDOW_TICKS) continue;
@@ -254,10 +254,10 @@ public class AggroTracker {
 
 		boolean shooting = shootingAtUs && config.rangedAttacksCountAsEngagement;
 		//? if >=26.3 {
-		if (moveCounts || mob.isSwinging() || shooting) {
-		//?} else {
-		/*if (moveCounts || mob.swinging || shooting) {
-		*///?}
+		/*if (moveCounts || mob.isSwinging() || shooting) {
+		*///?} else {
+		if (moveCounts || mob.swinging || shooting) {
+		//?}
 			lastActiveTick.put(id, now);
 		}
 	}
@@ -286,10 +286,10 @@ public class AggroTracker {
 	// always counts
 	private boolean isActivelyEngaged(Mob mob, long now) {
 		//? if >=26.3 {
-		if (mob.isSwinging()) return true;
-		//?} else {
-		/*if (mob.swinging) return true;
-		*///?}
+		/*if (mob.isSwinging()) return true;
+		*///?} else {
+		if (mob.swinging) return true;
+		//?}
 		Long t = lastActiveTick.get(mob.getId());
 		return t != null && (now - t) <= ACTIVE_WINDOW_TICKS;
 	}
