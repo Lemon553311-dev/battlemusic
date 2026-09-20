@@ -1,7 +1,7 @@
 # Minecraft Battle Music mod
 
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.16.5+-green)
-![Minecraft](https://img.shields.io/badge/Minecraft-26.3+-green)
+![Minecraft](https://img.shields.io/badge/Minecraft-26.3-green)
 
 This mod plays your imported music during mob/PVP battles.
 

@@ -71,7 +71,7 @@ public class BattleMusicConfig {
 
 	// Fades / timing
 	/** Seconds of "no aggro" before the fade-out begins */
-	public double fadeOutDelaySeconds = 15.0D;
+	public double fadeOutDelaySeconds = 7.0D;
 	public double fadeOutDurationSeconds = 7.0D;
 	public double fadeInDurationSeconds = 3.0D;
 
