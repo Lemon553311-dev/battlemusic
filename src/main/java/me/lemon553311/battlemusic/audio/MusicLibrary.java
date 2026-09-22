@@ -189,30 +189,26 @@ public class MusicLibrary {
 		return Math.max(0.0, w);
 	}
 
-	// weighted random pick, avoiding an immediate repeat; uniform if all weights are 0
+	// weighted random pick, avoiding an immediate repeat. tracks with weight 0
+	// ("never plays") are excluded; null when nothing is pickable.
 	private Path pickWeighted(List<Path> list, Path avoid) {
-		if (list.isEmpty()) return null;
-		if (list.size() == 1) return list.get(0);
+		List<Path> eligible = new ArrayList<>(list.size());
+		for (Path p : list) if (weightOf(p) > 0.0) eligible.add(p);
+		if (eligible.isEmpty()) return null;
+		if (eligible.size() == 1) return eligible.get(0);
 		double total = 0.0;
-		for (Path p : list) total += weightOf(p);
-		if (total <= 0.0) return pick(list, avoid); // all excluded -> behave as before
-		Path choice = list.get(list.size() - 1);
+		for (Path p : eligible) total += weightOf(p);
+		Path choice = eligible.get(eligible.size() - 1);
 		int guard = 0;
 		do {
 			double r = ThreadLocalRandom.current().nextDouble() * total;
 			double acc = 0.0;
-			for (Path p : list) {
+			for (Path p : eligible) {
 				acc += weightOf(p);
 				if (r <= acc) { choice = p; break; }
 			}
-		} while (choice.equals(avoid) && positiveWeightCount(list) > 1 && guard++ < 8);
+		} while (choice.equals(avoid) && eligible.size() > 1 && guard++ < 8);
 		return choice;
-	}
-
-	private int positiveWeightCount(List<Path> list) {
-		int n = 0;
-		for (Path p : list) if (weightOf(p) > 0.0) n++;
-		return n;
 	}
 
 	public synchronized Path pickRegular() {
@@ -262,17 +258,5 @@ public class MusicLibrary {
 		} catch (IOException e) {
 			return 0L;
 		}
-	}
-
-	private static Path pick(List<Path> list, Path avoid) {
-		if (list.isEmpty()) return null;
-		if (list.size() == 1) return list.get(0);
-		Path choice;
-		int guard = 0;
-
-		do {
-			choice = list.get(ThreadLocalRandom.current().nextInt(list.size()));
-		} while (choice.equals(avoid) && guard++ < 8);
-		return choice;
 	}
 }

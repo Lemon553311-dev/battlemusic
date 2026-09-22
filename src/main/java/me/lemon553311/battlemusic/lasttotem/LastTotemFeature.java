@@ -134,7 +134,7 @@ public final class LastTotemFeature {
 	}
 
 	private void onClientTick(Minecraft client) {
-		if (config == null || !config.lastTotemEnabled) {
+		if (config == null || !config.enabled || !config.lastTotemEnabled) {
 			lastTotemCount = -1;
 			return;
 		}
@@ -151,8 +151,10 @@ public final class LastTotemFeature {
 			return;
 		}
 
-		// falling edge to exactly one remaining
-		if (lastTotemCount >= 2 && count == 1) {
+		// falling edge 2 -> 1. a totem use consumes exactly one totem, so any
+		// bigger single-tick drop (2+ totems moved into a chest, shulker, etc.)
+		// is an inventory rearrangement, not a totem being spent.
+		if (lastTotemCount == 2 && count == 1) {
 			trigger(client);
 		}
 		lastTotemCount = count;
