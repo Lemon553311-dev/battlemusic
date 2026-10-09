@@ -115,6 +115,29 @@ jobs:
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
           CURSEFORGE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_test && 'true' || '' }}
 
+  # Unit tests (plain JUnit, no game boot). Runs once, not per target.
+  # See tests/README.md. Add new suites under tests/src/test/java.
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDKs
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+            25
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run unit tests
+        run: ./gradlew :tests:test --configure-on-demand --no-daemon
+
   # Assembles the GitHub Release from the already-built jars. Real tags only.
   release:
     needs: build
