@@ -196,6 +196,9 @@ public class BattleMusicConfig {
 	}
 
 	private static double clampD(double v, double lo, double hi) {
+		// NaN (hand-edited config garbage) survives Math.max/min untouched and
+		// would silently break detection/fades/volumes downstream; pin it to lo
+		if (Double.isNaN(v)) return lo;
 		return Math.max(lo, Math.min(hi, v));
 	}
 }

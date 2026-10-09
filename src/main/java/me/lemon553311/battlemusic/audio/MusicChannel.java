@@ -191,6 +191,11 @@ public class MusicChannel {
 		SourceDataLine line = null;
 		ShortBuffer pcm = null;
 		ByteBuffer encoded = null;
+		// true when the track played to its natural end (vs stopped early).
+		// the device buffer still holds ~0.2s of already-written audio then,
+		// so it must be drained, not flushed, or every track's tail is cut.
+		// declared outside try: the finally block below reads it.
+		boolean completedNaturally = false;
 
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			IntBuffer error = stack.mallocInt(1);
@@ -277,6 +282,7 @@ public class MusicChannel {
 						MusicLibrary.markUnplayable(path);
 					} else {
 						BattleMusicClient.debug("[{}] reached end of {}", name, path.getFileName());
+						completedNaturally = true;
 					}
 					break;
 				}
@@ -304,7 +310,10 @@ public class MusicChannel {
 				try { MemoryUtil.memFree(pcm); } catch (Throwable ignored) {}
 			}
 			if (line != null) {
-				try { line.flush(); line.stop(); line.close(); } catch (Throwable ignored) {}
+				// drain a naturally-finished track so its tail actually plays;
+				// flush a stopped one so the cut is instant. drain blocks up to
+				// one device buffer (~0.2s) on this dying daemon thread only.
+				try { if (completedNaturally) line.drain(); else line.flush(); line.stop(); line.close(); } catch (Throwable ignored) {}
 			}
 			if (decoder != NULL) {
 				try { stb_vorbis_close(decoder); } catch (Throwable ignored) {}

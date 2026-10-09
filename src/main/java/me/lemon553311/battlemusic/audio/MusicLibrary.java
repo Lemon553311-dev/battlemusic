@@ -139,6 +139,23 @@ public class MusicLibrary {
 		return playable(heavy).size();
 	}
 
+	// tracks the picker can actually return: decodable AND weight > 0.
+	// loop decisions must use these, not the playable counts above: a pool
+	// with one eligible track plus weight-0 ("never plays") padding would
+	// otherwise re-roll the same track with gaps instead of looping it.
+	public synchronized int eligibleRegularCount() {
+		return eligibleCount(regular);
+	}
+	public synchronized int eligibleHeavyCount() {
+		return eligibleCount(heavy);
+	}
+
+	private int eligibleCount(List<Path> list) {
+		int n = 0;
+		for (Path p : list) if (isPlayable(p) && weightOf(p) > 0.0) n++;
+		return n;
+	}
+
 	// snapshots for the mod-menu Songs tab
 	public synchronized List<Path> regularTracks() {
 		return new ArrayList<>(regular);

@@ -31,10 +31,6 @@ import net.minecraft.resources.ResourceLocation;
 /*import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.resources.ResourceLocation;
-*///?} else {
-/*import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.gui.GuiComponent;
-import net.minecraft.resources.ResourceLocation;
 *///?}
 //? if >=1.21.6 {
 import net.minecraft.client.renderer.RenderPipelines;
@@ -125,7 +121,7 @@ public final class LastHeartFeature {
 	/*private void onHudRender(PoseStack matrices) {
 	*///?}
 		if (!animActive) return;
-		if (config == null || !config.lastHeartEnabled) {
+		if (config == null || !config.enabled || !config.lastHeartEnabled) {
 			animActive = false;
 			return;
 		}

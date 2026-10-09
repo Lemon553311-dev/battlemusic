@@ -40,6 +40,7 @@ public final class OneShotSound {
 	}
 
 	public static void play(String resource, float gain) {
+		if (resource == null) return;
 		final float g = Math.max(0f, Math.min(1f, gain));
 		Thread t = new Thread(() -> {
 			try {

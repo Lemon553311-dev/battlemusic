@@ -342,9 +342,9 @@ public class BattleStateMachine {
 		}
 		// consume the resume token so a re-roll can't reuse it
 		resumeRegularFile = null;
-		// loop only with a single track; otherwise play through and let
+		// loop only with a single pickable track; otherwise play through and let
 		// refreshFinishedTracks() roll the next one
-		boolean loop = library.playableRegularCount() <= 1;
+		boolean loop = library.eligibleRegularCount() <= 1;
 		double startSec = (startFrame > 0L) ? 0.0 : library.startSecondsFor(track);
 		regularChannel.setTrackGain(library.effectiveVolumeFor(track));
 		if (track != null && regularChannel.start(track, loop, startFrame, startSec)) {
@@ -379,7 +379,7 @@ public class BattleStateMachine {
 			// with the "both" pool the regular channel may already be playing this exact
 			// file; crossfading it onto heavy would play it twice
 			Path nowPlaying = regularChannel.getLoaded();
-			if (track != null && track.equals(nowPlaying) && library.playableHeavyCount() > 1) {
+			if (track != null && track.equals(nowPlaying) && library.eligibleHeavyCount() > 1) {
 				for (int i = 0; i < 6 && track != null && track.equals(nowPlaying); i++) track = library.pickHeavy();
 			}
 			BattleMusicClient.debug("engageHeavy: phase=HEAVY, track={}", track == null ? "<none>" : track.getFileName());
@@ -397,7 +397,7 @@ public class BattleStateMachine {
 		// bring heavy in first and only cut regular once it actually started, so a failed
 		// start can't leave the battle silent. loop only with a single pickable track,
 		// counted in whichever pool the track actually came from.
-		boolean loop = (library.playableHeavyCount() > 0 ? library.playableHeavyCount() : library.playableRegularCount()) <= 1;
+		boolean loop = (library.playableHeavyCount() > 0 ? library.eligibleHeavyCount() : library.eligibleRegularCount()) <= 1;
 		double startSec = (startFrame > 0L) ? 0.0 : library.startSecondsFor(track);
 		heavyChannel.setTrackGain(library.effectiveVolumeFor(track));
 		if (heavyChannel.start(track, loop, startFrame, startSec)) {
@@ -441,7 +441,7 @@ public class BattleStateMachine {
 					track == null ? "<none>" : track.getFileName());
 		}
 		resumeRegularFile = null;
-		boolean loop = (library.playableRegularCount() + library.playableHeavyCount()) <= 1;
+		boolean loop = (library.eligibleRegularCount() + library.eligibleHeavyCount()) <= 1;
 		double startSec = (startFrame > 0L) ? 0.0 : library.startSecondsFor(track);
 		regularChannel.setTrackGain(library.effectiveVolumeFor(track));
 		if (track != null && regularChannel.start(track, loop, startFrame, startSec)) {
