@@ -63,8 +63,12 @@ public class Entity {
 		return dx * dx + dy * dy + dz * dz;
 	}
 
-	public Vec3 getEyePosition(float partialTick) {
+	public Vec3 getEyePosition() {
 		return new Vec3(x, y + 1.62D, z);
+	}
+
+	public Vec3 getEyePosition(float partialTick) {
+		return getEyePosition();
 	}
 
 	public Vec3 getDeltaMovement() {

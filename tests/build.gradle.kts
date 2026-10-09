@@ -30,7 +30,7 @@ dependencies {
 // per-target CI compiles, not here. Generation (not a symlink) keeps this
 // working on Windows CI runners too.
 val prodSlice = layout.buildDirectory.dir("generated-prod-slice")
-val copyProdSlice by tasks.registering(Copy::class) {
+val copyProdSlice = tasks.register<Copy>("copyProdSlice") {
 	from("../src/main/java") {
 		include(
 			"me/lemon553311/battlemusic/config/BattleMusicConfig.java",
