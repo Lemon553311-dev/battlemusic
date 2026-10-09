@@ -113,9 +113,9 @@ public class BattleStateMachine {
 		if (client.isPaused()) {
 			// singleplayer pause: HOLD the battle instead of ending it. fading here
 			// also wiped the pvp timers, so pausing mid-duel killed the music for good.
-			// freeze everything and pick it back up on unpause.
+			// freeze everything and pick it back up on unpause: fades must not
+			// advance either, so the channels are deliberately not ticked here.
 			suppressVanillaMusic(client);
-			tickChannels(dt);
 			return;
 		}
 
@@ -224,12 +224,10 @@ public class BattleStateMachine {
 	}
 
 	private void suppressVanillaMusic(Minecraft client) {
-		// not compiled on 26.1+ yet: music-manager API names there are unverified
-		//? if <26.1 {
+		// verified present on 26.3 too (same method on the non-obfuscated client)
 		if (regularChannel.isAudible() || heavyChannel.isAudible()) {
 			client.getMusicManager().stopPlaying();
 		}
-		//?}
 	}
 
 	private void startBattle(LocalPlayer player, boolean boss, boolean playerCombatHot, int count) {
@@ -315,9 +313,13 @@ public class BattleStateMachine {
 	}
 
 	private void engageRegular(boolean allowResume) {
-		if (!library.hasRegular()) {
+		// playable counts, not raw folder counts: a folder whose tracks all
+		// failed to decode falls back like an empty one. (weight-0 tracks are
+		// filtered later by the picker, which yields null; the null track below
+		// is handled by staying silent, per "0 = never plays".)
+		if (library.playableRegularCount() == 0) {
 			// no regular tracks: fall back to heavy so there's still music
-			if (library.hasHeavy()) {
+			if (library.playableHeavyCount() > 0) {
 				BattleMusicClient.debug("engageRegular: no regular tracks; falling back to the heavy folder");
 				engageHeavy(allowResume);
 			} else {
@@ -340,9 +342,9 @@ public class BattleStateMachine {
 		}
 		// consume the resume token so a re-roll can't reuse it
 		resumeRegularFile = null;
-		// loop only with a single track; otherwise play through and let
+		// loop only with a single pickable track; otherwise play through and let
 		// refreshFinishedTracks() roll the next one
-		boolean loop = library.playableRegularCount() <= 1;
+		boolean loop = library.eligibleRegularCount() <= 1;
 		double startSec = (startFrame > 0L) ? 0.0 : library.startSecondsFor(track);
 		regularChannel.setTrackGain(library.effectiveVolumeFor(track));
 		if (track != null && regularChannel.start(track, loop, startFrame, startSec)) {
@@ -369,13 +371,15 @@ public class BattleStateMachine {
 			BattleMusicClient.debug("engageHeavy: RESUMING {} at frame {} (within {}s)",
 					track.getFileName(), startFrame, config.resumeWithinSeconds);
 		} else {
-			// heavy uses its own folder, falls back to regular if empty
-			track = library.hasHeavy() ? library.pickHeavy()
-					: (library.hasRegular() ? library.pickRegular() : null);
+			// heavy uses its own folder, falls back to regular if it has
+			// nothing playable (empty or all undecodable). a null pick (all
+			// weight 0) stays silent below, per "0 = never plays".
+			track = library.playableHeavyCount() > 0 ? library.pickHeavy()
+					: (library.playableRegularCount() > 0 ? library.pickRegular() : null);
 			// with the "both" pool the regular channel may already be playing this exact
 			// file; crossfading it onto heavy would play it twice
 			Path nowPlaying = regularChannel.getLoaded();
-			if (track != null && track.equals(nowPlaying) && library.playableHeavyCount() > 1) {
+			if (track != null && track.equals(nowPlaying) && library.eligibleHeavyCount() > 1) {
 				for (int i = 0; i < 6 && track != null && track.equals(nowPlaying); i++) track = library.pickHeavy();
 			}
 			BattleMusicClient.debug("engageHeavy: phase=HEAVY, track={}", track == null ? "<none>" : track.getFileName());
@@ -391,8 +395,9 @@ public class BattleStateMachine {
 			return;
 		}
 		// bring heavy in first and only cut regular once it actually started, so a failed
-		// start can't leave the battle silent. loop only with a single heavy track.
-		boolean loop = (library.hasHeavy() ? library.playableHeavyCount() : library.playableRegularCount()) <= 1;
+		// start can't leave the battle silent. loop only with a single pickable track,
+		// counted in whichever pool the track actually came from.
+		boolean loop = (library.playableHeavyCount() > 0 ? library.eligibleHeavyCount() : library.eligibleRegularCount()) <= 1;
 		double startSec = (startFrame > 0L) ? 0.0 : library.startSecondsFor(track);
 		heavyChannel.setTrackGain(library.effectiveVolumeFor(track));
 		if (heavyChannel.start(track, loop, startFrame, startSec)) {
@@ -436,7 +441,7 @@ public class BattleStateMachine {
 					track == null ? "<none>" : track.getFileName());
 		}
 		resumeRegularFile = null;
-		boolean loop = (library.playableRegularCount() + library.playableHeavyCount()) <= 1;
+		boolean loop = (library.eligibleRegularCount() + library.eligibleHeavyCount()) <= 1;
 		double startSec = (startFrame > 0L) ? 0.0 : library.startSecondsFor(track);
 		regularChannel.setTrackGain(library.effectiveVolumeFor(track));
 		if (track != null && regularChannel.start(track, loop, startFrame, startSec)) {
@@ -496,11 +501,11 @@ public class BattleStateMachine {
 		}
 	}
 
-	// true if file is a readable resume target within the cooldown window
+	// true if file is a readable, decodable resume target within the cooldown window
 	private boolean canResume(Path file) {
 		if (!config.battleResumeEnabled || file == null || resumeStampNanos == 0L) return false;
 		double age = (System.nanoTime() - resumeStampNanos) / 1_000_000_000.0;
-		return age <= config.resumeWithinSeconds && Files.isReadable(file);
+		return age <= config.resumeWithinSeconds && Files.isReadable(file) && MusicLibrary.isPlayable(file);
 	}
 
 	// true while inside the post-battle resume window; lowers the mob bar for
@@ -645,6 +650,13 @@ public class BattleStateMachine {
 	// re-read config-derived state (settings screen saved)
 	public void onConfigChanged() {
 		bosses.refreshExtraIds();
+		// folder/song volumes from the Songs tab apply to whatever is already
+		// playing, so the tab feels live (gain is baked per audio chunk, so
+		// this takes effect within ~0.1s)
+		Path reg = regularChannel.getLoaded();
+		if (reg != null) regularChannel.setTrackGain(library.effectiveVolumeFor(reg));
+		Path hvy = heavyChannel.getLoaded();
+		if (hvy != null) heavyChannel.setTrackGain(library.effectiveVolumeFor(hvy));
 	}
 }
 

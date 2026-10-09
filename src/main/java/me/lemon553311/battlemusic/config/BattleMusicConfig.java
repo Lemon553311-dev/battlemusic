@@ -8,8 +8,10 @@ import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -145,7 +147,17 @@ public class BattleMusicConfig {
 
 		try {
 			Files.createDirectories(path().getParent());
-			Files.write(path(), GSON.toJson(this).getBytes(StandardCharsets.UTF_8));
+			byte[] json = GSON.toJson(this).getBytes(StandardCharsets.UTF_8);
+			Path p = path();
+			// write-then-move so a crash/power cut can never leave a half-written
+			// battlemusic.json behind (which would reset all settings to defaults)
+			Path tmp = p.resolveSibling(p.getFileName().toString() + ".tmp");
+			Files.write(tmp, json);
+			try {
+				Files.move(tmp, p, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+			} catch (AtomicMoveNotSupportedException e) {
+				Files.move(tmp, p, StandardCopyOption.REPLACE_EXISTING);
+			}
 
 		} catch (IOException e) {
 			BattleMusicClient.LOGGER.warn("Failed to save config", e);
@@ -184,6 +196,9 @@ public class BattleMusicConfig {
 	}
 
 	private static double clampD(double v, double lo, double hi) {
+		// NaN (hand-edited config garbage) survives Math.max/min untouched and
+		// would silently break detection/fades/volumes downstream; pin it to lo
+		if (Double.isNaN(v)) return lo;
 		return Math.max(lo, Math.min(hi, v));
 	}
 }

@@ -92,6 +92,8 @@ public class AggroTracker {
 		approachAnchorTick.clear();
 		neutralCombatTick.clear();
 		aggroCount = 0;
+		lastInRange = 0;
+		lastAggroSignals = 0;
 	}
 
 	// now is a monotonic client-tick counter from the state machine, NOT

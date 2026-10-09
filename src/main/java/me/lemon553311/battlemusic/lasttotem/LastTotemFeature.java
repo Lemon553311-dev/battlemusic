@@ -88,6 +88,21 @@ public final class LastTotemFeature {
 	// last sampled total totem count (-1 = not sampled yet)
 	private int lastTotemCount = -1;
 
+	// damage-gating for the trigger below: a real totem pop is always caused
+	// by damage (hurtTime rising edge), so a 2 -> 1 drop with no damage near
+	// it is an inventory rearrangement (chest, shulker, ...), not a pop.
+	// hurtTime is a plain LivingEntity field on every version, no gate needed.
+	private long tick = 0L;
+	private int lastHurtTime = 0;
+	private long lastDamageTick = Long.MIN_VALUE / 2;
+	// a 2 -> 1 drop with no damage behind it waits a few ticks: the damage
+	// packet can land just after the inventory sync. -1 = nothing pending.
+	private long pendingDropTick = -1;
+	// ticks before the drop that still count as "caused by this damage"
+	private static final long DAMAGE_BEFORE_TICKS = 20L;
+	// ticks after the drop to still accept a late damage packet
+	private static final long DAMAGE_AFTER_TICKS = 10L;
+
 	// written on the client tick, read on the render thread
 	private volatile boolean animActive = false;
 	private volatile long animStartNanos = 0L;
@@ -134,15 +149,31 @@ public final class LastTotemFeature {
 	}
 
 	private void onClientTick(Minecraft client) {
-		if (config == null || !config.lastTotemEnabled) {
+		if (config == null || !config.enabled || !config.lastTotemEnabled) {
 			lastTotemCount = -1;
+			pendingDropTick = -1;
 			return;
 		}
 		LocalPlayer player = client.player;
 		if (player == null || client.level == null) {
 			lastTotemCount = -1;
+			pendingDropTick = -1;
 			return;
 		}
+		tick++;
+
+		// rising edge on hurtTime = a damage instance landed (same signal the
+		// PvP tracker uses; survives absorption/regen that hides health loss)
+		int hurt = player.hurtTime;
+		if (hurt > lastHurtTime) {
+			lastDamageTick = tick;
+			// a drop seen just before this damage was its pop after all
+			if (pendingDropTick >= 0 && tick - pendingDropTick <= DAMAGE_AFTER_TICKS) {
+				pendingDropTick = -1;
+				trigger(client);
+			}
+		}
+		lastHurtTime = hurt;
 
 		int count = countTotems(player);
 		if (lastTotemCount < 0) {
@@ -151,9 +182,22 @@ public final class LastTotemFeature {
 			return;
 		}
 
-		// falling edge to exactly one remaining
-		if (lastTotemCount >= 2 && count == 1) {
-			trigger(client);
+		// falling edge 2 -> 1. a totem use consumes exactly one totem, so any
+		// bigger single-tick drop (2+ totems moved into a chest, shulker, etc.)
+		// is an inventory rearrangement, not a totem being spent. and even an
+		// exact 2 -> 1 is only a pop if damage landed just before it; without
+		// damage it is one totem moved into a container by hand.
+		if (lastTotemCount == 2 && count == 1) {
+			if (tick - lastDamageTick <= DAMAGE_BEFORE_TICKS) {
+				pendingDropTick = -1;
+				trigger(client);
+			} else {
+				pendingDropTick = tick;
+			}
+		} else if (pendingDropTick >= 0 && (count != 1 || tick - pendingDropTick > DAMAGE_AFTER_TICKS)) {
+			// count moved on (picked a totem back up) or no damage showed up:
+			// it really was an inventory rearrangement
+			pendingDropTick = -1;
 		}
 		lastTotemCount = count;
 	}
@@ -208,6 +252,10 @@ public final class LastTotemFeature {
 	/*private void onHudRender(PoseStack matrices) {
 	*///?}
 		if (!animActive) return;
+		if (config == null || !config.enabled || !config.lastTotemEnabled) {
+			animActive = false;
+			return;
+		}
 
 		double elapsed = (System.nanoTime() - animStartNanos) / 1_000_000_000.0;
 		if (elapsed >= PHASE1_SECONDS + PHASE2_SECONDS) {

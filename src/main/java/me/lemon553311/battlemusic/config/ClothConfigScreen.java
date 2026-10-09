@@ -181,7 +181,7 @@ public final class ClothConfigScreen {
 				.setSaveConsumer(v -> c.playerDamageWindowSeconds = v)
 				.build());
 		playerCombat.addEntry(eb.startDoubleField(txt("Combat timeout (seconds)"), c.playerCombatTimeoutSeconds)
-				.setDefaultValue(10.0).setMin(1.0).setMax(600.0)
+				.setDefaultValue(15.0).setMin(1.0).setMax(600.0)
 				.setTooltip(txt("How long PvP music keeps playing after the last hit from another player. It refreshes on every hit, so an active fight never cuts out, and the music ends this many calm seconds after the fight. This is the MAIN control for how long PvP music lingers, lower it for a snappier stop."))
 				.setSaveConsumer(v -> c.playerCombatTimeoutSeconds = v)
 				.build());
@@ -198,7 +198,7 @@ public final class ClothConfigScreen {
 						default: return txt("Heavy Battle pool");
 					}
 				})
-				.setTooltip(txt("Which folder of tracks plays when the PvP trigger STARTS a battle. Heavy = Heavy Battle folder (default, most intense). Regular = Regular Battle folder (calmer). Both = randomly from either folder. Low-HP and bosses still always escalate to heavy."))
+				.setTooltip(txt("Which folder of tracks plays when the PvP trigger STARTS a battle. Heavy = Heavy Battle folder (default, most intense). Regular = Regular Battle folder (calmer). Both = randomly from either folder. Bosses still always escalate to heavy; low HP does not escalate a PvP-pool battle (a duel keeps you at low HP constantly)."))
 				.setSaveConsumer(v -> c.playerCombatMusicPool = v)
 				.build());
 
