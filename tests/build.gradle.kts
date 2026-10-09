@@ -22,6 +22,8 @@ dependencies {
 	compileOnly("org.lwjgl:lwjgl-stb:3.3.3")
 	testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.5")
 	testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.5")
+	// Gradle's test workers need the launcher on the runtime classpath.
+	testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.5")
 }
 
 // Production slice: copy the game-boot-free sources raw. Stonecutter //?
