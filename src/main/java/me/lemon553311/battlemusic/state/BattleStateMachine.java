@@ -314,7 +314,9 @@ public class BattleStateMachine {
 
 	private void engageRegular(boolean allowResume) {
 		// playable counts, not raw folder counts: a folder whose tracks all
-		// failed to decode (or are all weight 0) must fall back like an empty one
+		// failed to decode falls back like an empty one. (weight-0 tracks are
+		// filtered later by the picker, which yields null; the null track below
+		// is handled by staying silent, per "0 = never plays".)
 		if (library.playableRegularCount() == 0) {
 			// no regular tracks: fall back to heavy so there's still music
 			if (library.playableHeavyCount() > 0) {
@@ -370,7 +372,8 @@ public class BattleStateMachine {
 					track.getFileName(), startFrame, config.resumeWithinSeconds);
 		} else {
 			// heavy uses its own folder, falls back to regular if it has
-			// nothing pickable (empty, all undecodable, or all weight 0)
+			// nothing playable (empty or all undecodable). a null pick (all
+			// weight 0) stays silent below, per "0 = never plays".
 			track = library.playableHeavyCount() > 0 ? library.pickHeavy()
 					: (library.playableRegularCount() > 0 ? library.pickRegular() : null);
 			// with the "both" pool the regular channel may already be playing this exact
