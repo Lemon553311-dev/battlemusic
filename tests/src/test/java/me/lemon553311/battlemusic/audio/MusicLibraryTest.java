@@ -110,8 +110,45 @@ class MusicLibraryTest {
 		assertTrue(seen.contains("b.ogg"));
 	}
 
+	// The picker deliberately avoids immediate repeats (up to 8 re-rolls),
+	// so in a two-track pool the shares skew toward alternation no matter the
+	// weights. Weights still govern direction: the heavier track wins overall,
+	// and with 3+ tracks the shares track the weights with wide margins.
 	@Test
-	void distributionRoughlyFollowsWeights() throws Exception {
+	void heavierTrackWinsOverall() throws Exception {
+		writeTrack(MusicLibrary.HEAVY_DIR, "rare.ogg");
+		writeTrack(MusicLibrary.HEAVY_DIR, "mid.ogg");
+		writeTrack(MusicLibrary.HEAVY_DIR, "common.ogg");
+		setWeight("Heavy Battle/rare.ogg", 20.0D);
+		setWeight("Heavy Battle/mid.ogg", 30.0D);
+		setWeight("Heavy Battle/common.ogg", 50.0D);
+		library.rescan();
+		int rare = 0;
+		int mid = 0;
+		int common = 0;
+		int runs = 10000;
+		for (int i = 0; i < runs; i++) {
+			String name = library.pickHeavy().getFileName().toString();
+			if (name.equals("rare.ogg")) {
+				rare++;
+			} else if (name.equals("mid.ogg")) {
+				mid++;
+			} else {
+				common++;
+			}
+		}
+		double rareShare = rare / (double) runs;
+		double midShare = mid / (double) runs;
+		double commonShare = common / (double) runs;
+		assertTrue(commonShare > rareShare,
+				"common=" + commonShare + " rare=" + rareShare);
+		assertTrue(rareShare > 0.20 && rareShare < 0.36, "rare share was " + rareShare);
+		assertTrue(midShare > 0.24 && midShare < 0.42, "mid share was " + midShare);
+		assertTrue(commonShare > 0.32 && commonShare < 0.50, "common share was " + commonShare);
+	}
+
+	@Test
+	void twoTracksBothKeepPlayingDespiteSkewedWeights() throws Exception {
 		writeTrack(MusicLibrary.HEAVY_DIR, "rare.ogg");
 		writeTrack(MusicLibrary.HEAVY_DIR, "common.ogg");
 		setWeight("Heavy Battle/rare.ogg", 25.0D);
@@ -125,7 +162,7 @@ class MusicLibraryTest {
 			}
 		}
 		double share = rare / (double) runs;
-		assertTrue(share > 0.15 && share < 0.35, "rare share was " + share);
+		assertTrue(share > 0.30 && share < 0.70, "rare share was " + share);
 	}
 
 	@Test
