@@ -80,3 +80,9 @@ stonecutter {
 }
 
 rootProject.name = "battlemusic"
+
+// Plain-Java unit tests (no Loom, no Minecraft boot). This module is NOT a
+// Stonecutter version: it compiles a raw slice of src/main/java (whose //?
+// files are valid Java as-is) against hand-written stubs, plus JUnit suites.
+// See tests/README.md. Runs on CI (:tests:test); runnable locally too.
+include("tests")
