@@ -1,4 +1,4 @@
-// Build script for the non-obfuscated NeoForge targets (26.1.2, 26.2).
+// Build script for the non-obfuscated NeoForge targets (26.1.2, 26.2, 26.3).
 // ModDevGradle (NeoForge's own plugin) instead of Architectury Loom, which
 // can't build 26.1+ and must never share a script with another build plugin
 // (see settings.gradle.kts). Not a Loom fork: no modImplementation/remapJar,
@@ -10,7 +10,7 @@ plugins {
 	id("net.darkhax.curseforgegradle")
 }
 
-val mcVersion: String = project.name.substringBeforeLast("-neoforge") // "26.1.2" or "26.2"
+val mcVersion: String = project.name.substringBeforeLast("-neoforge") // "26.1.2", "26.2" or "26.3"
 
 val modVersion: String = System.getenv("MOD_VERSION")
 	?.trim()?.removePrefix("v")?.takeIf { it.isNotEmpty() }

@@ -1,4 +1,4 @@
-// Build script for the non-obfuscated Fabric targets (26.1.2, 26.2).
+// Build script for the non-obfuscated Fabric targets (26.1.2, 26.2, 26.3).
 // Mainline Fabric Loom in its non-obf mode - Architectury Loom can't build
 // 26.1+ and must never share a script with this plugin (see settings.gradle.kts).
 // No mappings() call (nothing is obfuscated) and no modImplementation/remapJar
@@ -10,7 +10,7 @@ plugins {
 	id("net.darkhax.curseforgegradle")
 }
 
-val mcVersion: String = project.name.substringBeforeLast("-fabric") // "26.1.2" or "26.2"
+val mcVersion: String = project.name.substringBeforeLast("-fabric") // "26.1.2", "26.2" or "26.3"
 
 val modVersion: String = System.getenv("MOD_VERSION")
 	?.trim()?.removePrefix("v")?.takeIf { it.isNotEmpty() }

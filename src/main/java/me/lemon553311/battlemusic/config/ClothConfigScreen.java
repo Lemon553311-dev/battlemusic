@@ -224,7 +224,7 @@ public final class ClothConfigScreen {
 		// Fades & timing
 		ConfigCategory fades = builder.getOrCreateCategory(txt("Fades & Timing"));
 		fades.addEntry(eb.startDoubleField(txt("Fade-out delay (seconds)"), c.fadeOutDelaySeconds)
-				.setDefaultValue(15.0).setMin(0.0).setMax(600.0)
+				.setDefaultValue(7.0).setMin(0.0).setMax(600.0)
 				.setTooltip(txt("How long after the last aggro leaves before the music begins fading out."))
 				.setSaveConsumer(v -> c.fadeOutDelaySeconds = v)
 				.build());
