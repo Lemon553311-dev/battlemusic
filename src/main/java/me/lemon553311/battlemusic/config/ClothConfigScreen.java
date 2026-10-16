@@ -259,8 +259,10 @@ public final class ClothConfigScreen {
 				.build());
 
 		// password-gated "Fun" tab; always just called "Fun" so it gives nothing away.
-		// the code only unlocks the tab, features stay off until toggled.
-		boolean funUnlocked = c.funUnlocked || c.lastTotemEnabled;
+		// the code only unlocks the tab, features stay off until toggled. either
+		// feature being on keeps the tab visible (a config that enables one already
+		// knows the code).
+		boolean funUnlocked = c.funUnlocked || c.lastTotemEnabled || c.lastHeartEnabled;
 		ConfigCategory secret = builder.getOrCreateCategory(txt("Fun"));
 		if (!funUnlocked) {
 			secret.addEntry(eb.startTextDescription(

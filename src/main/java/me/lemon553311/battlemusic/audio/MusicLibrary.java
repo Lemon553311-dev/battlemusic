@@ -258,6 +258,21 @@ public class MusicLibrary {
 		return lastBoth;
 	}
 
+	// a pickable track from either folder that isn't `avoid`, preferring heavy.
+	// used when the pick equals the file already streaming on the other channel:
+	// null means every pickable track IS `avoid` (or nothing is pickable).
+	public synchronized Path pickOtherThan(Path avoid) {
+		if (playableHeavyCount() > 0) {
+			Path p = pickHeavy();
+			if (p != null && !p.equals(avoid)) return p;
+		}
+		if (playableRegularCount() > 0) {
+			Path p = pickRegular();
+			if (p != null && !p.equals(avoid)) return p;
+		}
+		return null;
+	}
+
 	// rescan only if a folder mtime changed (folder mtime updates on add/remove,
 	// not on in-place file edits - fine for us)
     public synchronized boolean rescanIfChanged() {

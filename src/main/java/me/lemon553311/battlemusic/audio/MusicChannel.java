@@ -28,6 +28,10 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class MusicChannel {
 	private static final int SAMPLES_PER_CHUNK = 4096; // per channel
+	// after the output itself failed (no device, line busy, format rejected...),
+	// refuse new starts for this long: without it the state machine re-rolls a new
+	// track every tick and every attempt spawns a thread plus a logged stack trace
+	private static final long RETRY_COOLDOWN_NANOS = 5_000_000_000L;
 
 	private final AudioEngine engine;
 	private final String name;
@@ -47,6 +51,7 @@ public class MusicChannel {
 	private volatile AtomicBoolean activeFlag;
 	// sample frame offset of the next sample to decode (for battle resume)
 	private volatile long playbackFrame = 0L;
+	private volatile long retryBlockedUntilNanos = 0L;
 
 	public MusicChannel(AudioEngine engine, String name) {
 		this.engine = engine;
@@ -75,6 +80,11 @@ public class MusicChannel {
 		}
 		if (!MusicLibrary.isPlayable(oggPath)) {
 			BattleMusicClient.debug("[{}] skipping {} (failed to decode earlier this session)", name, oggPath.getFileName());
+			return false;
+		}
+
+		if (System.nanoTime() < retryBlockedUntilNanos) {
+			BattleMusicClient.debug("[{}] start of {} skipped while the audio output recovers from a failure", name, oggPath.getFileName());
 			return false;
 		}
 
@@ -165,6 +175,12 @@ public class MusicChannel {
 
 		Thread t = playThread;
 		return t == null || !t.isAlive();
+	}
+
+	// true while a start failure is still cooling down; the state machine skips
+	// its re-rolls then, instead of spinning pick -> fail -> pick every tick
+	public boolean isRetrySuppressed() {
+		return System.nanoTime() < retryBlockedUntilNanos;
 	}
 
 	public void release() {
@@ -305,6 +321,12 @@ public class MusicChannel {
 
 		} catch (Throwable t) {
 			BattleMusicClient.LOGGER.warn("[{}] playback error for {}", name, path, t);
+			// the output itself failed (none available, line busy, format rejected...):
+			// cool down so the machine does not re-roll a track - and this warning -
+			// every tick against the same broken output
+			if (activeFlag == alive) {
+				retryBlockedUntilNanos = System.nanoTime() + RETRY_COOLDOWN_NANOS;
+			}
 		} finally {
 			if (pcm != null) {
 				try { MemoryUtil.memFree(pcm); } catch (Throwable ignored) {}

@@ -132,6 +132,9 @@ public class BattleStateMachine {
 					beginFadeOut(false);
 				}
 			}
+			// the held track is still audible here; without this vanilla's music
+			// manager is free to start a track on top of it
+			suppressVanillaMusic(client);
 			tickChannels(dt);
 			return;
 		}
@@ -156,10 +159,12 @@ public class BattleStateMachine {
 		// duel must not keep pvp music alive with nobody around).
 		damage.update(player, world, clientTick);
 		boolean combatActivity = damage.receivedThisTick();
-		if (damage.isTriggered()) {
-			playerCombatSecondsLeft = config.playerCombatTimeoutSeconds; // arm on a qualifying burst
-		} else if (combatActivity && playerCombatSecondsLeft > 0.0) {
-			playerCombatSecondsLeft = config.playerCombatTimeoutSeconds; // any later hit keeps it hot
+		// arm on the hit that makes the window qualifying, or on any later hit while
+		// already hot. isTriggered() stays true for the whole damage window, so arming
+		// on it without a fresh hit stretched combat-hot to timeout + the full window
+		// (~20s with the 15s/5s defaults) instead of "timeout seconds after the hit".
+		if (combatActivity && (damage.isTriggered() || playerCombatSecondsLeft > 0.0)) {
+			playerCombatSecondsLeft = config.playerCombatTimeoutSeconds;
 		}
 		playerCombatSecondsLeft = Math.max(0.0, playerCombatSecondsLeft - dt);
 		boolean playerCombatHot = playerCombatSecondsLeft > 0.0;
@@ -171,8 +176,11 @@ public class BattleStateMachine {
 		playerCombatWasHot = playerCombatHot;
 
 		// inside the resume window the bar to re-start drops to resumeAggroMobCount
-		// ("adrenaline keeps going"); cold starts still need the full count
-		int mobThreshold = (!battleActive && inResumeWindow()) ? config.resumeAggroMobCount : config.aggroMobCount;
+		// ("adrenaline keeps going"); cold starts still need the full count. clamped
+		// min() so a config built in code (bypassing clamp()) cannot invert the bar.
+		int mobThreshold = (!battleActive && inResumeWindow())
+				? Math.min(config.resumeAggroMobCount, config.aggroMobCount)
+				: config.aggroMobCount;
 		boolean qualifies = count >= mobThreshold || boss || playerCombatHot;
 
 		logStatusThrottled(dt, player, count, boss, qualifies, playerCombatHot);
@@ -286,6 +294,9 @@ public class BattleStateMachine {
 
 	private void maybeUpgradeToHeavy(LocalPlayer player, boolean boss, boolean playerCombatHot, int count) {
 		if (heavyLatched) return;
+		// don't hammer a heavy channel whose output just failed; it cools down
+		// internally and the next attempt after that is the retry
+		if (heavyChannel.isRetrySuppressed()) return;
 		boolean lowHp = player.getHealth() <= config.heavyHealthThreshold;
 		boolean manyMobs = count >= config.heavyAggroMobCount;
 		// in a pvp-pool battle low hp must not escalate (pvp keeps you under the
@@ -376,11 +387,26 @@ public class BattleStateMachine {
 			// weight 0) stays silent below, per "0 = never plays".
 			track = library.playableHeavyCount() > 0 ? library.pickHeavy()
 					: (library.playableRegularCount() > 0 ? library.pickRegular() : null);
-			// with the "both" pool the regular channel may already be playing this exact
-			// file; crossfading it onto heavy would play it twice
+			// the regular channel may already be streaming this exact file (both pool,
+			// or the previous battle's track still fading out); crossfading it onto
+			// heavy would play it twice. re-roll from whichever pool can offer
+			// something else (the old loop only rerolled within heavy and gave up when
+			// the heavy folder was empty/unplayable).
 			Path nowPlaying = regularChannel.getLoaded();
-			if (track != null && track.equals(nowPlaying) && library.eligibleHeavyCount() > 1) {
-				for (int i = 0; i < 6 && track != null && track.equals(nowPlaying); i++) track = library.pickHeavy();
+			if (track != null && track.equals(nowPlaying)) {
+				Path alternative = library.pickOtherThan(nowPlaying);
+				if (alternative == null) {
+					// the only pickable track is the one already playing: keep it on the
+					// regular channel instead of doubling it. maybeUpgradeToHeavy retries
+					// next tick, so this clears itself once a different track (or
+					// nothing) is on the regular channel.
+					BattleMusicClient.debug("engageHeavy: {} is the only pickable track and is already playing; not doubling it",
+							track.getFileName());
+					phase = prevPhase;
+					heavyLatched = prevLatched;
+					return;
+				}
+				track = alternative;
 			}
 			BattleMusicClient.debug("engageHeavy: phase=HEAVY, track={}", track == null ? "<none>" : track.getFileName());
 		}
@@ -501,6 +527,30 @@ public class BattleStateMachine {
 		}
 	}
 
+	/**
+	 * advance the resume point to the channels' current decode positions while a
+	 * fade-out is still running. the channels keep decoding until the gain reaches
+	 * 0, so the snapshot taken in beginFadeOut() (where the fade STARTED) would
+	 * make a resume replay the whole fade; the last refresh before the channel
+	 * stops itself is within a tick of where playback actually ended.
+	 */
+
+	private void refreshResumeFrames() {
+		if (!config.battleResumeEnabled) return;
+		boolean touched = false;
+		if (resumeRegularFile != null && regularChannel.isLoaded()) {
+			resumeRegularFrame = regularChannel.getPlaybackFrame();
+			touched = true;
+		}
+		if (resumeHeavyFile != null && heavyChannel.isLoaded()) {
+			resumeHeavyFrame = heavyChannel.getPlaybackFrame();
+			touched = true;
+		}
+		// the resume window should start when the music actually stops, not when the
+		// fade starts; otherwise part of it burns away during the fade
+		if (touched) resumeStampNanos = System.nanoTime();
+	}
+
 	// true if file is a readable, decodable resume target within the cooldown window
 	private boolean canResume(Path file) {
 		if (!config.battleResumeEnabled || file == null || resumeStampNanos == 0L) return false;
@@ -536,13 +586,17 @@ public class BattleStateMachine {
 		if (!battleActive) return;
 		// check getLoaded() != null, NOT isLoaded(): a finished non-looping track sets
 		// running=false but keeps its loaded path - exactly the "roll the next" case.
-		// fade-out/hardStop clear loaded so those are skipped.
-		if (phase == Phase.HEAVY && heavyChannel.getLoaded() != null && heavyChannel.isFinished()) {
+		// fade-out/hardStop clear loaded so those are skipped. a channel whose output
+		// just failed is cooling down: skip it until the cooldown expires, otherwise
+		// the roll (and its thread + warning) repeats every tick.
+		if (phase == Phase.HEAVY && heavyChannel.getLoaded() != null && heavyChannel.isFinished()
+				&& !heavyChannel.isRetrySuppressed()) {
 			BattleMusicClient.debug("Heavy track finished; rolling another");
 			engageHeavy(false);
 			// previous track already ended: quick fade in, not the long start swell
 			if (heavyChannel.isLoaded()) heavyChannel.fadeTo(1f, continuationFadeSeconds(), false);
-		} else if (phase == Phase.REGULAR && regularChannel.getLoaded() != null && regularChannel.isFinished()) {
+		} else if (phase == Phase.REGULAR && regularChannel.getLoaded() != null && regularChannel.isFinished()
+				&& !regularChannel.isRetrySuppressed()) {
 			if (regularUsesBothPool) {
 				BattleMusicClient.debug("Regular (PvP both-pool) track finished; rolling another");
 				engageBoth(false);
@@ -563,6 +617,10 @@ public class BattleStateMachine {
 	private void tickChannels(double dt) {
 		regularChannel.update(dt);
 		heavyChannel.update(dt);
+		// fade-outs are still decoding: keep the resume point in step with the
+		// playback head so a resume continues where the music stopped, not where
+		// the fade began (see refreshResumeFrames)
+		if (!battleActive) refreshResumeFrames();
 	}
 
 	// once-per-second status snapshot, gated by config.debug

@@ -121,6 +121,9 @@ public class BattleMusicConfig {
 	@SuppressWarnings("null")
 	public static BattleMusicConfig load() {
 		Path p = path();
+		// set when the file existed but was unusable, so its contents get preserved
+		// instead of being overwritten by the defaults save below
+		boolean unreadable = false;
 
 		try {
 			if (Files.exists(p)) {
@@ -131,15 +134,32 @@ public class BattleMusicConfig {
 					cfg.clamp();
 					return cfg;
 				}
+				unreadable = true; // parsed to nothing (empty file / literal null)
 			}
 
 		} catch (Exception e) {
+			unreadable = true;
 			BattleMusicClient.LOGGER.warn("Failed to read config, using defaults", e);
 		}
+
+		if (unreadable) backupUnreadable(p);
 
 		BattleMusicConfig cfg = new BattleMusicConfig();
 		cfg.save();
 		return cfg;
+	}
+
+	// keep an unreadable config around instead of letting the defaults save()
+	// overwrite it: one stray character would otherwise silently reset every
+	// setting, including per-song weights and the secret unlocks
+	private static void backupUnreadable(Path p) {
+		try {
+			Path broken = p.resolveSibling(p.getFileName().toString() + ".broken");
+			Files.move(p, broken, StandardCopyOption.REPLACE_EXISTING);
+			BattleMusicClient.LOGGER.warn("Kept the unreadable config as {}", broken.getFileName());
+		} catch (Exception e) {
+			BattleMusicClient.LOGGER.warn("Could not set the unreadable config aside; it will be overwritten", e);
+		}
 	}
 
 	public void save() {
