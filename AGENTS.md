@@ -53,3 +53,6 @@ Client-side Minecraft mod ("Battle Music", package `me.lemon553311.battlemusic`)
 ## Releasing
 
 Pushing a `v*` tag triggers `release.yml`: builds all 30 targets in parallel and publishes to Modrinth + CurseForge (secrets `MODRINTH_TOKEN`/`CURSEFORGE_TOKEN`; mod version taken from the tag). Manual dispatch offers a `publish_test` checkbox = full dry run of both publish steps. Tagless/local builds fall back to `mod.version` in `stonecutter.properties.toml`.
+
+## Managing Git
+Do not commit anything EVER to main branch. Do not push EVER. Like EVER. You may only commit to a branch that is not main, only if you're asked to make changes.
